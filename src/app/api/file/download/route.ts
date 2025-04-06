@@ -1,15 +1,6 @@
 import { NextResponse } from "next/server";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
-
-// Create S3 client for R2
-const s3Client = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT,
-  credentials: {
-    accessKeyId: process.env.R2_ACCESS_KEY_ID || "",
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY || "",
-  },
-});
+import { GetObjectCommand } from "@aws-sdk/client-s3";
+import { s3Client } from "@/utils/objectStore";
 
 export async function GET(req: Request) {
   try {
@@ -19,17 +10,8 @@ export async function GET(req: Request) {
     const fileUrl = searchParams.get("fileUrl");
     
     // Determine the key (filename) to retrieve
-    let key;
-    
-    if (fileName) {
-      // If a direct filename is provided, use it
-      key = fileName;
-    } else if (fileUrl) {
-      // If a full URL is provided, extract the filename from it
-      // This handles URLs like: https://bucket.r2.cloudflarestorage.com/bucket-name/filename.ext
-      const urlParts = fileUrl.split('/');
-      key = urlParts[urlParts.length - 1];
-    } else {
+    const key = extractFileKey(fileName, fileUrl);
+    if (!key) {
       return NextResponse.json(
         { message: "Missing required parameter: file or fileUrl" },
         { status: 400 }
@@ -38,47 +20,102 @@ export async function GET(req: Request) {
     
     console.log("Retrieving file with key:", key);
 
-    // Get file from R2 using SDK
-    const command = new GetObjectCommand({
-      Bucket: process.env.R2_BUCKET_NAME || "skillswaphub",
-      Key: key,
-    });
-
-    try {
-      const response = await s3Client.send(command);
-      
-      if (!response.Body) {
-        console.error("File not found in R2:", key);
-        return NextResponse.json(
-          { message: "File not found" },
-          { status: 404 }
-        );
-      }
-
-      // Convert the response body to a buffer instead of streaming directly
-      const arrayBuffer = await response.Body.transformToByteArray();
-      const buffer = Buffer.from(arrayBuffer);
-      
-      // Return the file with appropriate headers
-      return new NextResponse(buffer, {
-        headers: {
-          "Content-Type": response.ContentType || "application/octet-stream",
-          "Content-Length": response.ContentLength?.toString() || buffer.length.toString(),
-          "Content-Disposition": `inline; filename="${encodeURIComponent(key)}"`,
-        },
-      });
-    } catch (error) {
-      console.error("Error retrieving file from R2:", error);
-      return NextResponse.json(
-        { message: "Error retrieving file", error: JSON.stringify(error) },
-        { status: 500 }
-      );
-    }
+    // Use streaming response for better performance
+    return await streamFileFromR2(key);
   } catch (error) {
     console.error("Error processing request:", error);
     return NextResponse.json(
-      { message: "Server error", error: JSON.stringify(error) },
+      { message: "Server error", error: error instanceof Error ? error.message : String(error) },
       { status: 500 }
     );
   }
+}
+
+/**
+ * Extract file key from provided parameters
+ */
+function extractFileKey(fileName: string | null, fileUrl: string | null): string | null {
+  if (fileName) {
+    return sanitizeKey(fileName);
+  } else if (fileUrl) {
+    const urlParts = fileUrl.split('/');
+    return sanitizeKey(urlParts[urlParts.length - 1]);
+  }
+  return null;
+}
+
+/**
+ * Sanitize key to prevent directory traversal
+ */
+function sanitizeKey(key: string): string {
+  // Remove path traversal characters and limit to filename
+  return key.replace(/^.*[\\\/]/, '');
+}
+
+/**
+ * Stream file from R2 storage with proper headers
+ */
+async function streamFileFromR2(key: string): Promise<NextResponse> {
+  const bucketName = process.env.R2_BUCKET_NAME || "skillswaphub";
+  
+  try {
+    const command = new GetObjectCommand({
+      Bucket: bucketName,
+      Key: key,
+    });
+
+    const response = await s3Client.send(command);
+    
+    if (!response.Body) {
+      console.error("File not found in R2:", key);
+      return NextResponse.json(
+        { message: "File not found" },
+        { status: 404 }
+      );
+    }
+
+    // Get content type with fallback
+    const contentType = response.ContentType || guessContentType(key) || "application/octet-stream";
+    
+    // Use ReadableStream for efficient streaming
+    const stream = response.Body.transformToWebStream();
+    
+    return new NextResponse(stream, {
+      headers: {
+        "Content-Type": contentType,
+        "Content-Disposition": `inline; filename="${encodeURIComponent(key)}"`,
+        "Cache-Control": "public, max-age=86400", // Cache for 24 hours
+        ...(response.ContentLength && { "Content-Length": response.ContentLength.toString() })
+      },
+    });
+  } catch (error) {
+    console.error("Error retrieving file from R2:", error);
+    return NextResponse.json(
+      { message: "Error retrieving file", error: error instanceof Error ? error.message : String(error) },
+      { status: 500 }
+    );
+  }
+}
+
+/**
+ * Guess content type from file extension
+ */
+function guessContentType(filename: string): string | null {
+  const ext = filename.split('.').pop()?.toLowerCase();
+  const mimeTypes: Record<string, string> = {
+    'pdf': 'application/pdf',
+    'jpg': 'image/jpeg',
+    'jpeg': 'image/jpeg',
+    'png': 'image/png',
+    'gif': 'image/gif',
+    'txt': 'text/plain',
+    'html': 'text/html',
+    'csv': 'text/csv',
+    'json': 'application/json',
+    'mp4': 'video/mp4',
+    'mp3': 'audio/mpeg',
+    // Add more as needed
+  };
+  
+  return ext && ext in mimeTypes ? mimeTypes[ext] : null;
 }
