@@ -46,7 +46,7 @@ const achievementSchema = new mongoose.Schema({
   level: { 
     type: String,
     required: true,
-    enum: ['School', 'Zonal', 'District', 'Provincial', 'National', 'International']
+    enum: [ 'Zonal', 'District', 'Provincial', 'National', 'International']
   },
   position: { 
     type: String

@@ -12,6 +12,8 @@
     "@types/bcryptjs": "^2.4.6",
     "bcrypt": "^5.1.1",
     "bcryptjs": "^3.0.2",
+    "dotenv": "^16.4.7",
+    "mongodb": "^6.15.0",
     "mongoose": "^8.13.2",
     "next": "15.2.4",
     "react": "^19.0.0",
