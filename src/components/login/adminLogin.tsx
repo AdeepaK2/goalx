@@ -36,13 +36,15 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, isLoading = false }) =
   };
 
   return (
-    <div style={styles.container}>
-      <div style={styles.card}>
-        <h1 style={styles.title}>Admin Login</h1>
+    <div className="flex justify-center items-center min-h-screen bg-white">
+      <div className="bg-white rounded-lg shadow-lg p-10 w-full max-w-md">
+        <h1 className="text-2xl font-semibold mb-6 text-[#1e0fbf] text-center">Admin Login</h1>
         
         <form onSubmit={handleSubmit}>
-          <div style={styles.inputGroup}>
-            <label htmlFor="email" style={styles.label}>Email</label>
+          <div className="mb-5">
+            <label htmlFor="email" className="block mb-2 text-sm font-medium text-gray-700">
+              Email
+            </label>
             <input
               id="email"
               type="email"
@@ -50,13 +52,15 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, isLoading = false }) =
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => validateEmail(email)}
               placeholder="Enter your email"
-              style={styles.input}
+              className="w-full px-3 py-3 text-sm border border-gray-200 rounded-md outline-none transition-colors"
             />
-            {emailError && <p style={styles.error}>{emailError}</p>}
+            {emailError && <p className="text-red-600 text-xs mt-1">{emailError}</p>}
           </div>
           
-          <div style={styles.inputGroup}>
-            <label htmlFor="password" style={styles.label}>Password</label>
+          <div className="mb-5">
+            <label htmlFor="password" className="block mb-2 text-sm font-medium text-gray-700">
+              Password
+            </label>
             <input
               id="password"
               type="password"
@@ -64,14 +68,14 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, isLoading = false }) =
               onChange={(e) => setPassword(e.target.value)}
               onBlur={() => validatePassword(password)}
               placeholder="Enter your password"
-              style={styles.input}
+              className="w-full px-3 py-3 text-sm border border-gray-200 rounded-md outline-none transition-colors"
             />
-            {passwordError && <p style={styles.error}>{passwordError}</p>}
+            {passwordError && <p className="text-red-600 text-xs mt-1">{passwordError}</p>}
           </div>
           
           <button 
             type="submit" 
-            style={styles.button}
+            className="w-full py-3 text-base font-medium text-white bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] border-none rounded-md cursor-pointer transition-transform disabled:opacity-70"
             disabled={isLoading}
           >
             {isLoading ? 'Logging in...' : 'Login'}
@@ -80,69 +84,6 @@ const AdminLogin: React.FC<AdminLoginProps> = ({ onLogin, isLoading = false }) =
       </div>
     </div>
   );
-};
-
-const styles: {[key: string]: React.CSSProperties} = {
-  container: {
-    display: 'flex',
-    justifyContent: 'center',
-    alignItems: 'center',
-    minHeight: '100vh',
-    backgroundColor: '#fff',
-  },
-  card: {
-    backgroundColor: '#fff',
-    borderRadius: '8px',
-    boxShadow: '0 4px 20px rgba(0, 0, 0, 0.1)',
-    padding: '2.5rem',
-    width: '100%',
-    maxWidth: '400px',
-  },
-  title: {
-    fontSize: '24px',
-    fontWeight: '600',
-    marginBottom: '24px',
-    color: '#1e0fbf',
-    textAlign: 'center',
-  },
-  inputGroup: {
-    marginBottom: '20px',
-  },
-  label: {
-    display: 'block',
-    marginBottom: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    color: '#333',
-  },
-  input: {
-    width: '100%',
-    padding: '12px',
-    fontSize: '14px',
-    border: '1px solid #e0e0e0',
-    borderRadius: '4px',
-    boxSizing: 'border-box' as 'border-box',
-    transition: 'border-color 0.2s ease',
-    outline: 'none',
-  },
-  error: {
-    color: '#ff3333',
-    fontSize: '12px',
-    marginTop: '5px',
-  },
-  button: {
-    width: '100%',
-    padding: '12px',
-    fontSize: '16px',
-    fontWeight: '500',
-    color: '#fff',
-    backgroundColor: '#1e0fbf',
-    background: 'linear-gradient(45deg, #1e0fbf, #6e11b0)',
-    border: 'none',
-    borderRadius: '4px',
-    cursor: 'pointer',
-    transition: 'transform 0.1s, box-shadow 0.2s',
-  },
 };
 
 export default AdminLogin;
