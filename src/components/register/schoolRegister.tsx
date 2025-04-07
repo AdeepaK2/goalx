@@ -91,9 +91,8 @@ const SchoolRegister = () => {
       }
 
       setSuccess(true);
-      // Redirect or show success message
       setTimeout(() => {
-        router.push('/login');
+        router.push(`/verify?type=school&email=${encodeURIComponent(formData.contact.email)}`);
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
@@ -122,7 +121,10 @@ const SchoolRegister = () => {
                 </div>
                 <div className="ml-3">
                   <p className="text-sm font-medium text-green-800">
-                    Registration successful! Redirecting...
+                    Registration successful! We've sent a 4-digit verification code to your school email.
+                  </p>
+                  <p className="mt-2 text-sm text-green-700">
+                    Redirecting to verification page...
                   </p>
                 </div>
               </div>

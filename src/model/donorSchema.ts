@@ -35,8 +35,14 @@ const donorCounterSchema = new mongoose.Schema({
   seq: Number
 });
 
-// Fix: Use the safe model registration function
-const DonorCounter = getModel('DonorCounter', donorCounterSchema);
+// Interface for counter document
+interface ICounter extends mongoose.Document {
+  _id: string;
+  seq: number;
+}
+
+// Fix: Use the safe model registration function with proper typing
+const DonorCounter = getModel<ICounter>('DonorCounter', donorCounterSchema);
 
 // Base donor schema with common fields for both types
 const donorSchema = new mongoose.Schema({

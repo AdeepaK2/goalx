@@ -77,6 +77,70 @@ export const sendVerificationEmail = async (
   await sendEmail(email, 'Verify your GoalX account', htmlContent);
 };
 
+// Send verification email to school
+export const sendSchoolVerificationEmail = async (
+  email: string,
+  verificationCode: string,
+  schoolName: string
+): Promise<void> => {
+  const baseUrl = getBaseUrl();
+  const verificationUrl = `${baseUrl}/verify?type=school&email=${encodeURIComponent(email)}`;
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Welcome to GoalX!</h2>
+      <p>Thank you for registering ${schoolName} with GoalX. Your verification code is:</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px; background-color: #f0f0f0; border-radius: 4px;">
+          ${verificationCode}
+        </div>
+      </div>
+      
+      <p>Please enter this code on the verification page to complete your school's registration.</p>
+      <p>Alternatively, you can visit <a href="${verificationUrl}">${verificationUrl}</a> and enter the code there.</p>
+      
+      <p>This verification code will expire in 24 hours.</p>
+      
+      <p>Best regards,<br>The GoalX Team</p>
+    </div>
+  `;
+
+  await sendEmail(email, 'Verify your GoalX school account', htmlContent);
+};
+
+// Send verification email to governing body
+export const sendGovernBodyVerificationEmail = async (
+  email: string,
+  verificationCode: string,
+  organizationName: string
+): Promise<void> => {
+  const baseUrl = getBaseUrl();
+  const verificationUrl = `${baseUrl}/verify?type=govern&email=${encodeURIComponent(email)}`;
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Welcome to GoalX!</h2>
+      <p>Thank you for registering ${organizationName} with GoalX. Your verification code is:</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px; background-color: #f0f0f0; border-radius: 4px;">
+          ${verificationCode}
+        </div>
+      </div>
+      
+      <p>Please enter this code on the verification page to complete your registration.</p>
+      <p>Alternatively, you can visit <a href="${verificationUrl}">${verificationUrl}</a> and enter the code there.</p>
+      
+      <p>This verification code will expire in 24 hours.</p>
+      
+      <p>Best regards,<br>The GoalX Team</p>
+    </div>
+  `;
+
+  await sendEmail(email, 'Verify your GoalX Governing Body account', htmlContent);
+};
+
 // Send welcome email after verification
 export const sendWelcomeEmail = async (
   email: string,
@@ -210,4 +274,60 @@ export const sendNotificationEmail = async (
   `;
 
   await sendEmail(email, subject, htmlContent);
+};
+
+// Send school registration notification email
+export const sendSchoolRegistrationNotificationEmail = async (
+  email: string,
+  schoolName: string
+): Promise<void> => {
+  const baseUrl = getBaseUrl();
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Thank You for Registering with GoalX!</h2>
+      <p>Dear ${schoolName} Administrator,</p>
+      <p>Your school email has been successfully verified. Thank you for joining GoalX!</p>
+      
+      <div style="margin: 20px 0; padding: 20px; border: 1px solid #e5e5e5; border-radius: 4px; background-color: #f9f9f9;">
+        <h3 style="margin-top: 0;">Next Steps</h3>
+        <p>Our admin team will review your school details and contact you shortly to complete the verification process. This additional verification helps ensure the security and integrity of our platform.</p>
+        <p>Once approved, you'll receive a confirmation email with instructions for accessing your school account.</p>
+      </div>
+      
+      <p>If you have any questions, please don't hesitate to contact our support team.</p>
+      
+      <p>Best regards,<br>The GoalX Team</p>
+    </div>
+  `;
+
+  await sendEmail(email, 'Your School Registration - Next Steps', htmlContent);
+};
+
+// Send notification to governing body about pending approval
+export const sendGovernBodyRegistrationNotificationEmail = async (
+  email: string,
+  organizationName: string
+): Promise<void> => {
+  const baseUrl = getBaseUrl();
+  
+  const htmlContent = `
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+      <h2>Thank You for Registering with GoalX!</h2>
+      <p>Dear ${organizationName} Administrator,</p>
+      <p>Your email has been successfully verified. Thank you for joining GoalX!</p>
+      
+      <div style="margin: 20px 0; padding: 20px; border: 1px solid #e5e5e5; border-radius: 4px; background-color: #f9f9f9;">
+        <h3 style="margin-top: 0;">Next Steps</h3>
+        <p>Our admin team will review your organization details and contact you shortly to complete the verification process. This additional verification helps ensure the security and integrity of our platform.</p>
+        <p>Once approved, you'll receive a confirmation email with instructions for accessing your account.</p>
+      </div>
+      
+      <p>If you have any questions, please don't hesitate to contact our support team.</p>
+      
+      <p>Best regards,<br>The GoalX Team</p>
+    </div>
+  `;
+
+  await sendEmail(email, 'Your Governing Body Registration - Next Steps', htmlContent);
 };

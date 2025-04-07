@@ -1,9 +1,11 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 const AdminLoginPage: React.FC = () => {
   const router = useRouter();
@@ -11,6 +13,14 @@ const AdminLoginPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+
+  // Check if user is already logged in
+  useEffect(() => {
+    const token = localStorage.getItem('adminToken');
+    if (token) {
+      router.push('/admin');
+    }
+  }, [router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -22,20 +32,33 @@ const AdminLoginPage: React.FC = () => {
     setError(null);
     
     try {
-      // Here you would make an API call to your backend auth service
-      console.log('Admin login attempt with:', email);
+      // API call to backend auth service
+      const response = await fetch('/api/auth/admin', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+      });
       
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      const data = await response.json();
       
-      // If login is successful, redirect to admin dashboard
-      // router.push('/admin/dashboard');
+      if (!response.ok) {
+        throw new Error(data.error || 'Authentication failed');
+      }
       
-      // For now, just log that login was successful
-      console.log('Admin login successful!');
+      // Store token in localStorage
+      localStorage.setItem('adminToken', data.token);
+      
+      // Store admin info
+      localStorage.setItem('adminInfo', JSON.stringify(data.admin));
+      
+      // Redirect to admin dashboard
+      router.push('/admin/dashboard');
     } catch (err) {
       console.error('Login failed:', err);
-      setError('Invalid email or password. Please try again.');
+      setError(err instanceof Error ? err.message : 'Invalid email or password. Please try again.');
+      toast.error(err instanceof Error ? err.message : 'Invalid email or password. Please try again.');
     } finally {
       setIsLoading(false);
     }
@@ -123,6 +146,7 @@ const AdminLoginPage: React.FC = () => {
           )}
         </div>
       </div>
+      <ToastContainer />
     </div>
   );
 };

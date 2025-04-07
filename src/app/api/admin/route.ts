@@ -11,7 +11,7 @@ export async function GET(req: NextRequest) {
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
     
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    await connect();
     
     if (id) {
       // Get specific admin by ID
@@ -37,7 +37,7 @@ export async function GET(req: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await mongoose.disconnect();
+    await disconnect();
   }
 }
 
@@ -55,7 +55,15 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    try {
+      await connect();
+    } catch (connectionError) {
+      console.error('MongoDB connection error:', connectionError);
+      return NextResponse.json(
+        { error: 'Database connection failed. Please check network access and MongoDB Atlas whitelist settings.' },
+        { status: 500 }
+      );
+    }
     
     // Check if admin with the same email already exists
     const existingAdmin = await Admin.findOne({ email });
@@ -91,7 +99,7 @@ export async function POST(req: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await mongoose.disconnect();
+    await disconnect();
   }
 }
 
@@ -117,7 +125,7 @@ export async function PATCH(req: NextRequest) {
       updateData.password = await bcrypt.hash(updateData.password, salt);
     }
     
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    await connect();
     
     // Find and update the admin
     const updatedAdmin = await Admin.findByIdAndUpdate(
@@ -141,7 +149,7 @@ export async function PATCH(req: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await mongoose.disconnect();
+    await disconnect();
   }
 }
 
@@ -158,7 +166,7 @@ export async function DELETE(req: NextRequest) {
       );
     }
     
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    await connect();
     
     // Find and delete the admin
     const deletedAdmin = await Admin.findByIdAndDelete(id);
@@ -181,6 +189,6 @@ export async function DELETE(req: NextRequest) {
       { status: 500 }
     );
   } finally {
-    await mongoose.disconnect();
+    await disconnect();
   }
 }

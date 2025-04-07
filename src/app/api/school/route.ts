@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import {connect} from '@/utils/database';
 import School from '@/model/schoolSchema';
 import mongoose from 'mongoose';
+// Import the verification code generator and email sender
+import { generateVerificationToken, sendSchoolVerificationEmail } from '@/utils/emailService';
 
 // Connect to database
 async function connectDB() {
@@ -18,10 +20,8 @@ async function connectDB() {
 
 // GET endpoint - fetch schools
 export async function GET(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    await connect();
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const district = searchParams.get('district');
@@ -88,19 +88,53 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - create a new school
 export async function POST(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    
     const body = await request.json();
     
-    const school = new School(body);
+    // Validate required fields
+    if (!body.name || !body.password || !body.contact?.email || 
+        !body.location?.district || !body.location?.province) {
+      return new NextResponse(JSON.stringify({ 
+        error: 'Missing required fields',
+        required: ['name', 'password', 'contact.email', 'location.district', 'location.province'] 
+      }), {
+        status: 400,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    }
+    
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
+    
+    const school = new School({
+      ...body,
+      verificationToken,
+      verificationTokenExpiry
+    });
+    
     await school.save();
     
-    // Return created school without password
-    const { password, ...schoolResponse } = school.toObject();
+    // Send verification email
+    await sendSchoolVerificationEmail(
+      school.contact.email, 
+      verificationToken, 
+      school.name
+    );
     
-    return new NextResponse(JSON.stringify(schoolResponse), {
+    // Return created school without password
+    const schoolData = school.toObject();
+    delete schoolData.password;
+    delete schoolData.verificationToken;
+    delete schoolData.verificationTokenExpiry;
+    
+    return new NextResponse(JSON.stringify({
+      ...schoolData,
+      message: 'Registration successful! Please check your email to verify your account.'
+    }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -133,15 +167,16 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  } finally {
+    await mongoose.disconnect();
   }
 }
 
 // PATCH endpoint - update a school
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    await connect();
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -199,10 +234,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE endpoint - delete a school
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    await connect();
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -213,7 +247,6 @@ export async function DELETE(request: NextRequest) {
       });
     }
     
-    // Find by _id, schoolId or sid
     const deletedSchool = await School.findOneAndDelete(
       { $or: [{ _id: id }, { schoolId: id }, { sid: parseInt(id) }] }
     );

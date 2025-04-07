@@ -3,6 +3,7 @@ import { connect } from '@/utils/database';
 import mongoose from 'mongoose';
 import GovernBody from '@/model/governBodySchema';
 import bcrypt from 'bcryptjs';
+import { generateVerificationToken, sendGovernBodyVerificationEmail } from '@/utils/emailService';
 
 // GET all governing bodies or a specific one by ID
 export async function GET(request: NextRequest) {
@@ -62,12 +63,36 @@ export async function POST(request: NextRequest) {
       body.governBodyId = `GB${(count + 1).toString().padStart(4, '0')}`;
     }
     
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
+    
+    // Add verification fields to the body
+    body.verified = false;
+    body.adminVerified = false;
+    body.verificationToken = verificationToken;
+    body.verificationTokenExpiry = verificationTokenExpiry;
+    
     // Create new governing body
     const newGovernBody = new GovernBody(body);
     await newGovernBody.save();
     
+    // Send verification email
+    await sendGovernBodyVerificationEmail(
+      newGovernBody.email, 
+      verificationToken, 
+      newGovernBody.name
+    );
+    
+    // Remove sensitive data before returning
+    const { password, verificationToken: vToken, verificationTokenExpiry: vTokenExpiry, ...responseData } = newGovernBody.toObject();
+    
     return NextResponse.json(
-      { message: 'Governing body created successfully', data: newGovernBody },
+      { 
+        message: 'Governing body created successfully! Please check your email to verify your account.', 
+        data: responseData 
+      },
       { status: 201 }
     );
     

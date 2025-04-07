@@ -80,9 +80,9 @@ const GoverBodyRegister = () => {
       }
 
       setSuccess(true);
-      // Redirect or show success message
+      // Redirect to verification page
       setTimeout(() => {
-        router.push('/login');
+        router.push(`/verify?type=govern&email=${encodeURIComponent(formData.email)}`);
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');

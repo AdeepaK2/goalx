@@ -60,9 +60,8 @@ const DonorRegister = () => {
       }
 
       setSuccess(true);
-      // Redirect or show success message
       setTimeout(() => {
-        router.push(`/verify?email=${encodeURIComponent(formData.email)}`);
+        router.push(`/verify?type=donor&email=${encodeURIComponent(formData.email)}`);
       }, 2000);
     } catch (err: any) {
       setError(err.message || 'Something went wrong');
