@@ -1,6 +1,5 @@
-import React from 'react'
-import { FiBox, FiPlus } from "react-icons/fi";
-
+import React, { useState } from 'react'
+import { FiBox, FiPlus, FiX } from "react-icons/fi";
 
 const itemsRequestedData = [
   {
@@ -29,13 +28,43 @@ const itemsRequestedData = [
   },
 ];
 
-
-
 const Requests = () => {
+  // State for modal visibility and form data
+  const [showModal, setShowModal] = useState(false);
+  const [requestForm, setRequestForm] = useState({
+    name: "",
+    quantity: "",
+    reason: "",
+    specialization: "",
+  });
+  
   // Handler function for the button click
   const handleMakeRequest = () => {
-    console.log("Make request button clicked");
-    // Implement logic to open a form or modal for equipment requests
+    setShowModal(true);
+  };
+  
+  // Handle form input changes
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const { name, value } = e.target;
+    setRequestForm({
+      ...requestForm,
+      [name]: value
+    });
+  };
+  
+  // Handle form submission
+  const handleSubmitRequest = (e: React.FormEvent) => {
+    e.preventDefault();
+    console.log("Form submitted:", requestForm);
+    // Here you would typically send this data to your API
+    // Reset form and close modal
+    setRequestForm({ name: "", quantity: "", reason: "", specialization: "" });
+    setShowModal(false);
+  };
+  
+  const handleCloseModal = () => {
+    setShowModal(false);
+    setRequestForm({ name: "", quantity: "", reason: "", specialization: "" });
   };
 
   return (
@@ -87,6 +116,106 @@ const Requests = () => {
                   </div>
                 </div> {/* Closing tag for grid */}
               </div>
+      
+      {/* Request Modal */}
+      {showModal && (
+        <div className="fixed inset-0 backdrop-blur bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 md:mx-0">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">Request Equipment</h3>
+              <button
+                onClick={handleCloseModal}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+            
+            {/* Modal Body */}
+            <form onSubmit={handleSubmitRequest} className="px-6 py-4">
+              <div className="space-y-4">
+              <div>
+                <label htmlFor="name" className="block text-sm font-medium text-[#1e0fbf]">
+                Equipment Name
+                </label>
+                <input
+                type="text"
+                id="name"
+                name="name"
+                value={requestForm.name}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-[#6e11b0] focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+                />
+              </div>
+
+              <div>
+                <label htmlFor="specialization" className="block text-sm font-medium text-[#1e0fbf]">
+                Equipment Specialization
+                </label>
+                <input
+                type="text"
+                id="specialization"
+                name="specialization"
+                value={requestForm.specialization}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 text-[#6e11b0] rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="quantity" className="block text-sm font-medium text-[#1e0fbf]">
+                Quantity
+                </label>
+                <input
+                type="number"
+                id="quantity"
+                name="quantity"
+                value={requestForm.quantity}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-[#6e11b0] focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+                />
+              </div>
+              
+              <div>
+                <label htmlFor="reason" className="block text-sm font-medium text-[#1e0fbf]">
+                Reason for Request
+                </label>
+                <textarea
+                id="reason"
+                name="reason"
+                rows={3}
+                value={requestForm.reason}
+                onChange={handleInputChange}
+                className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-[#6e11b0] focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                required
+                />
+              </div>
+              </div>
+              
+              {/* Modal Footer */}
+              <div className="mt-6 flex justify-end space-x-3">
+              <button
+                type="button"
+                onClick={handleCloseModal}
+                className="px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className="px-4 py-2 bg-[#1e0fbf] text-white text-sm font-medium rounded-md hover:bg-[#6e11b0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] transition duration-150 ease-in-out"
+              >
+                Submit Request
+              </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }

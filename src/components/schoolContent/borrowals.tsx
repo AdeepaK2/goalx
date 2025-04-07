@@ -30,19 +30,19 @@ const itemsBorrowedData = [
 
 
 const Borrowals = () => {
-  // Handler function for the button click
-  const handleRequestEquipment = () => {
-    console.log("Request equipment button clicked");
-    // Implement logic to open a form or modal for equipment requests
+  // Handler function for the return button click
+  const handleReturnEquipment = (itemId: number) => {
+    console.log(`Return equipment button clicked for item ID: ${itemId}`);
+    // Implement logic to handle the return of the specific equipment item
   };
 
   return (
     <div>
-        {/* Hero Section - Keeping the gradient as it already uses the correct colors */}
+        {/* Hero Section */}
               <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
                 <div className="max-w-5xl mx-auto">
                   <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
-                    Equipment Borrowals of your School {/* Corrected typo */}
+                    Equipment Borrowals of your School
                   </h1>
                   <p className="text-blue-100 text-xl mt-4 text-center max-w-2xl mx-auto">
                     Keep track of the equipment borrowed by your school. Ensure timely
@@ -61,25 +61,26 @@ const Borrowals = () => {
                       <h2 className="text-lg font-semibold text-gray-800 flex items-center">
                         <FiCheckCircle className="mr-2 text-[#1e0fbf]" /> Items Borrowed
                       </h2>
-                      <button
-                        onClick={handleRequestEquipment}
-                        className="flex items-center px-4 py-2 bg-[#1e0fbf] text-white text-sm font-medium rounded-md hover:bg-[#6e11b0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] transition duration-150 ease-in-out"
-                      >
-                        <FiMinus className="mr-1 h-4 w-4" /> Return Equipment
-                      </button>
+                      {/* Removed the single button from here */}
                     </div>
                     <div className="p-5">
                       <div className="space-y-4">
                         {itemsBorrowedData.map((item) => (
                           <div
                             key={item.id}
-                            className="bg-gray-50 p-3 rounded-md flex justify-between items-center" // Added items-center
+                            className="bg-gray-50 p-3 rounded-md flex justify-between items-center space-x-4" // Added space-x-4 for spacing
                           >
-                            <span className="text-gray-700 flex-1">{item.name}</span> 
-                            <span className="text-[#1e0fbf] text-sm text-right w-32">Received {item.borrowedDate.substring(5)}</span> 
-                            <span className="text-[#1e0fbf] text-sm text-right w-32"> 
+                            <span className="text-gray-700 flex-1 min-w-0">{item.name}</span>
+                            <span className="text-[#6e11b0] text-sm text-right w-28 flex-shrink-0">Received {item.borrowedDate.substring(5)}</span>
+                            <span className="text-[#1e0fbf] text-sm text-right w-28 flex-shrink-0">
                               Due {item.dueDate.substring(5)}
                             </span>
+                            <button
+                              onClick={() => handleReturnEquipment(item.id)} // Pass item.id to handler
+                              className="flex items-center px-3 py-1 bg-[#1e0fbf] text-white text-xs font-medium rounded-md hover:bg-[#6e11b0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] transition duration-150 ease-in-out flex-shrink-0" // Adjusted padding and text size
+                            >
+                              <FiMinus className="mr-1 h-3 w-3" /> Return {/* Adjusted icon size */}
+                            </button>
                           </div>
                         ))}
                       </div>
@@ -87,7 +88,7 @@ const Borrowals = () => {
                   </div>
                 </div>
               </div>
-    </div> // Added closing div
+    </div>
   );
 };
 
