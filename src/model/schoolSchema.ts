@@ -1,5 +1,5 @@
 import mongoose from 'mongoose';
-import bcrypt from 'bcrypt'; // Add bcrypt for password hashing
+import bcrypt from 'bcrypt';
 import { 
   SriLankanProvince, 
   SriLankanDistrict, 
@@ -28,6 +28,10 @@ interface ISchool extends mongoose.Document {
   };
   principalName?: string;
   verified: boolean;
+  // Add verification fields
+  verificationToken?: string;
+  verificationTokenExpiry?: Date;
+  adminVerified?: boolean;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -36,21 +40,24 @@ const counterSchema = new mongoose.Schema({
   seq: Number
 });
 
-const Counter = mongoose.model('Counter', counterSchema);
+// Use safe model registration
+const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
 
 const schoolSchema = new mongoose.Schema({
   schoolId: { type: String, unique: true, index: true },   
   sid: {
     type: Number,
     index: true,
+    required: false, // Make it not required by default
     validate: {
-      validator: function (v: number) {
-        return /^\d{5}$/.test(v.toString());
+      validator: function(v: number) {
+        // Only validate if value is present
+        return v === undefined || v === null || /^\d{5}$/.test(v.toString());
       },
       message: (props: { value: any }) => `${props.value} is not a valid 5-digit number!`
     }
   },
-  password: { type: String, required: true }, // Add password field
+  password: { type: String, required: true },
   name: { type: String, required: true, index: true },
   location: {
     district: {
@@ -70,13 +77,25 @@ const schoolSchema = new mongoose.Schema({
     }
   },
   contact: {
-    email: String,
+    email: {
+      type: String,
+      required: true
+    },
     phone: String
   },
   principalName: String,
   verified: {
     type: Boolean,
     default: false
+  },
+  // Add verification token fields
+  verificationToken: { type: String, index: true },
+  verificationTokenExpiry: { type: Date },
+  // Admin verification field with default to false
+  adminVerified: {
+    type: Boolean, 
+    default: false,
+    index: true // Add index for faster queries
   }
 });
 
@@ -161,4 +180,4 @@ schoolSchema.methods.comparePassword = async function(candidatePassword: string)
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-export default mongoose.model<ISchool>('School', schoolSchema);
+export default mongoose.models.School || mongoose.model<ISchool>('School', schoolSchema);

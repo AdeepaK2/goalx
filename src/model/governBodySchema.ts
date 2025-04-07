@@ -24,6 +24,11 @@ const governBodySchema = new mongoose.Schema({
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
+  // Add verification fields
+  verified: { type: Boolean, default: false },
+  verificationToken: { type: String, index: true },
+  verificationTokenExpiry: { type: Date },
+  adminVerified: { type: Boolean, default: false },
   active: { type: Boolean, default: true, select: false },
   createdAt: { type: Date, default: Date.now },
   updatedAt: { type: Date, default: Date.now }
@@ -39,9 +44,6 @@ governBodySchema.index({ name: 'text', abbreviation: 'text', description: 'text'
 
 // Index for sport filtering
 governBodySchema.index({ specializedSport: 1 }, { name: 'sport_filter' });
-
-// Pre-save middleware to auto-increment governBodyId
-
 
 // Update timestamp on update
 governBodySchema.pre('findOneAndUpdate', function() {

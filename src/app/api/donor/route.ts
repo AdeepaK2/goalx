@@ -1,21 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
-import Donor from '@/model/donorSchema';
 import mongoose from 'mongoose';
+import Donor from '@/model/donorSchema';
+import { generateVerificationToken, sendVerificationEmail } from '@/utils/emailService';
 
 // GET endpoint - fetch donors
 export async function GET(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Connect directly using Mongoose
+    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const name = searchParams.get('name');
     const email = searchParams.get('email');
     const donorType = searchParams.get('type');
-    const province = searchParams.get('province');
-    const district = searchParams.get('district');
+    const verified = searchParams.get('verified');
 
     // If ID is provided, fetch specific donor
     if (id) {
@@ -43,8 +42,9 @@ export async function GET(request: NextRequest) {
     if (donorType && ['INDIVIDUAL', 'COMPANY'].includes(donorType.toUpperCase())) {
       query.donorType = donorType.toUpperCase();
     }
-    if (province) query['address.province'] = province;
-    if (district) query['address.district'] = district;
+    if (verified !== null && verified !== undefined) {
+      query.verified = verified === 'true';
+    }
 
     // Fetch donors with optional pagination
     const page = parseInt(searchParams.get('page') || '1');
@@ -77,15 +77,18 @@ export async function GET(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  } finally {
+    // Disconnect after operation
+    await mongoose.disconnect();
   }
 }
 
 // POST endpoint - create a new donor
 export async function POST(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Connect directly using Mongoose
+    await mongoose.connect(process.env.MONGO_DB_URI as string);
+
     const body = await request.json();
     
     // Validate required fields
@@ -109,13 +112,29 @@ export async function POST(request: NextRequest) {
       });
     }
     
-    const donor = new Donor(body);
+    // Generate verification token
+    const verificationToken = generateVerificationToken();
+    const verificationTokenExpiry = new Date();
+    verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
+    
+    const donor = new Donor({
+      ...body,
+      verificationToken,
+      verificationTokenExpiry
+    });
+    
     await donor.save();
     
-    // Return created donor without password
-    const { password, ...donorObject } = donor.toObject();
+    // Send verification email
+    await sendVerificationEmail(donor.email, verificationToken, donor.displayName);
     
-    return new NextResponse(JSON.stringify(donorObject), {
+    // Return created donor without password
+    const { password, verificationToken: vt, verificationTokenExpiry: vte, ...donorObject } = donor.toObject();
+    
+    return new NextResponse(JSON.stringify({
+      ...donorObject,
+      message: 'Registration successful! Please check your email to verify your account.'
+    }), {
       status: 201,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -148,15 +167,18 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  } finally {
+    // Disconnect after operation
+    await mongoose.disconnect();
   }
 }
 
 // PATCH endpoint - update a donor
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Connect directly using Mongoose
+    await mongoose.connect(process.env.MONGO_DB_URI as string);
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -220,15 +242,18 @@ export async function PATCH(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  } finally {
+    // Disconnect after operation
+    await mongoose.disconnect();
   }
 }
 
 // DELETE endpoint - delete a donor
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Connect directly using Mongoose
+    await mongoose.connect(process.env.MONGO_DB_URI as string);
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -264,5 +289,8 @@ export async function DELETE(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
+  } finally {
+    // Disconnect after operation
+    await mongoose.disconnect();
   }
 }

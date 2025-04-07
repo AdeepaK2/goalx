@@ -37,5 +37,6 @@ const AdminSchema: Schema = new Schema(
 );
 
 // Create and export the Admin model
-const Admin = mongoose.model<IAdmin>('Admin', AdminSchema);
+// Check if the model already exists to prevent multiple registrations
+const Admin = mongoose.models.Admin || mongoose.model<IAdmin>('Admin', AdminSchema);
 export default Admin;

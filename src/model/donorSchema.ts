@@ -11,16 +11,22 @@ interface IDonor extends mongoose.Document {
   email: string;
   password: string;
   phone?: string;
-  address?: {
-    street?: string;
-    city?: string;
-    district?: SriLankanDistrict;
-    province?: SriLankanProvince;
-    postalCode?: string;
-  };
+  address?: string;
+  verified: boolean;
+  note: string;
+  verificationToken?: string;
+  verificationTokenExpiry?: Date;
   createdAt: Date;
   updatedAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
+}
+
+// Safe model registration function
+function getModel<T extends mongoose.Document>(
+  modelName: string,
+  schema: mongoose.Schema
+): mongoose.Model<T> {
+  return mongoose.models[modelName] || mongoose.model<T>(modelName, schema);
 }
 
 // Counter schema for auto-incrementing donorId
@@ -29,7 +35,14 @@ const donorCounterSchema = new mongoose.Schema({
   seq: Number
 });
 
-const DonorCounter = mongoose.model('DonorCounter', donorCounterSchema);
+// Interface for counter document
+interface ICounter extends mongoose.Document {
+  _id: string;
+  seq: number;
+}
+
+// Fix: Use the safe model registration function with proper typing
+const DonorCounter = getModel<ICounter>('DonorCounter', donorCounterSchema);
 
 // Base donor schema with common fields for both types
 const donorSchema = new mongoose.Schema({
@@ -48,27 +61,16 @@ const donorSchema = new mongoose.Schema({
     unique: true,
     index: true 
   },
-  // Add password field for authentication
   password: { 
     type: String, 
     required: true 
   },
   phone: { type: String, sparse: true, index: true },
-  address: {
-    street: String,
-    city: { type: String, index: true },
-    district: {
-      type: String,
-      enum: Object.values(SriLankanDistrict),
-      index: true
-    },
-    province: {
-      type: String,
-      enum: Object.values(SriLankanProvince),
-      index: true
-    },
-    postalCode: { type: String, index: true }
-  },
+  address: { type: String, index: true },
+  verified: { type: Boolean, default: false },
+  note: { type: String, default: '' },
+  verificationToken: { type: String, index: true },
+  verificationTokenExpiry: { type: Date },
   createdAt: { type: Date, default: Date.now, index: true },
   updatedAt: { type: Date, default: Date.now, index: true }
 }, {
@@ -76,26 +78,14 @@ const donorSchema = new mongoose.Schema({
   discriminatorKey: 'donorType'
 });
 
-// Text index for full-text search across key donor information
-donorSchema.index({ displayName: 'text', 'contact.email': 'text' }, { 
+// Set up indexes
+donorSchema.index({ displayName: 'text', email: 'text', address: 'text' }, { 
   name: 'donor_text_search',
-  weights: { displayName: 10, 'contact.email': 5 }
+  weights: { displayName: 10, email: 5, address: 3 }
 });
 
-// Compound index for location-based filtering
-donorSchema.index({ 
-  'address.province': 1, 
-  'address.district': 1, 
-  'address.city': 1 
-}, { name: 'location_search' });
-
-// Compound index for listing donors by type with sorting
 donorSchema.index({ donorType: 1, createdAt: -1 }, { name: 'donor_type_listing' });
-
-// Compound index for contact information lookups
-donorSchema.index({ 'contact.email': 1, 'contact.phone': 1 }, { name: 'contact_lookup' });
-
-// Efficient sorting by last update within donor type
+donorSchema.index({ verified: 1, donorType: 1 }, { name: 'verification_status' });
 donorSchema.index({ donorType: 1, updatedAt: -1 }, { name: 'donor_type_updates' });
 
 // Add method to compare passwords for authentication
@@ -142,6 +132,7 @@ donorSchema.pre('save', async function(next) {
   }
 });
 
-const Donor = mongoose.model<IDonor>('Donor', donorSchema);
+// Fix: Use the safe model registration function
+const Donor = getModel<IDonor>('Donor', donorSchema);
 
 export default Donor;
