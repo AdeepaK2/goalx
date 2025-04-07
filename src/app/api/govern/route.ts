@@ -1,19 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
 import mongoose from 'mongoose';
 import GovernBody from '@/model/governBodySchema';
 import bcrypt from 'bcryptjs';
 import { generateVerificationToken, sendGovernBodyVerificationEmail } from '@/utils/emailService';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET all governing bodies or a specific one by ID
 export async function GET(request: NextRequest) {
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+    
     const searchParams = request.nextUrl.searchParams;
     const id = searchParams.get('id');
-    
-    // Connect to database
-    await connect();
-    await mongoose.connect(process.env.MONGO_DB_URI!);
     
     // If ID is provided, return specific governing body
     if (id) {
@@ -47,9 +47,9 @@ export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
     
-    // Connect to database
-    await connect();
-    await mongoose.connect(process.env.MONGO_DB_URI!);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     // Hash password before saving
     if (body.password) {
@@ -64,7 +64,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Generate verification token
-    const verificationToken = generateVerificationToken();
+    const verificationToken = await generateVerificationToken();
     const verificationTokenExpiry = new Date();
     verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
     
@@ -119,9 +119,9 @@ export async function PATCH(request: NextRequest) {
       );
     }
     
-    // Connect to database
-    await connect();
-    await mongoose.connect(process.env.MONGO_DB_URI!);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     // Hash password if it's being updated
     if (updateData.password) {
@@ -170,9 +170,9 @@ export async function DELETE(request: NextRequest) {
       );
     }
     
-    // Connect to database
-    await connect();
-    await mongoose.connect(process.env.MONGO_DB_URI!);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     const deletedGovernBody = await GovernBody.findOneAndDelete({ governBodyId: id });
     

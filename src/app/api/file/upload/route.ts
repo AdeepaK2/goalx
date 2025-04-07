@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { uploadFileToR2 } from "@/utils/objectStore";
 import path from "path";
 import crypto from "crypto";
+import { ensureConnection } from '@/utils/connectionManager';
 
 // Configure max upload size (10MB)
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
@@ -17,6 +18,10 @@ const VALID_MIME_TYPES = [
 
 export async function POST(req: Request) {
   try {
+    // Ensure database connection (if needed for file metadata storage)
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     // Get the form data from the request
     const formData = await req.formData();
     const file = formData.get("file") as File | null;

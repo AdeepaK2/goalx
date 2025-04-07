@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
 import EquipmentRequest from '@/model/equipmentRequestSchema';
 import mongoose from 'mongoose';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET endpoint - fetch equipment requests
 export async function GET(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const schoolId = searchParams.get('school');
@@ -88,10 +89,11 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - create a new equipment request
 export async function POST(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const body = await request.json();
     
     // Validate required fields
@@ -176,10 +178,11 @@ export async function POST(request: NextRequest) {
 
 // PATCH endpoint - update an equipment request
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -257,10 +260,11 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE endpoint - delete an equipment request
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     

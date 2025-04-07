@@ -1,27 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
-import {connect} from '@/utils/database';
 import School from '@/model/schoolSchema';
 import mongoose from 'mongoose';
+import { ensureConnection } from '@/utils/connectionManager';
 // Import the verification code generator and email sender
 import { generateVerificationToken, sendSchoolVerificationEmail } from '@/utils/emailService';
-
-// Connect to database
-async function connectDB() {
-  try {
-    await connect();
-  } catch (error) {
-    console.error('Database connection failed:', error);
-    return new NextResponse(JSON.stringify({ error: 'Database connection failed' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  }
-}
 
 // GET endpoint - fetch schools
 export async function GET(request: NextRequest) {
   try {
-    await connect();
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+    
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const district = searchParams.get('district');
@@ -30,21 +20,33 @@ export async function GET(request: NextRequest) {
 
     // If ID is provided, fetch specific school
     if (id) {
-      const school = await School.findOne({ 
-        $or: [{ _id: id }, { schoolId: id }, { sid: parseInt(id) }] 
-      }).select('-password');
-      
-      if (!school) {
-        return new NextResponse(JSON.stringify({ error: 'School not found' }), {
-          status: 404,
+      try {
+        const school = await School.findOne({ 
+          $or: [
+            { _id: mongoose.isValidObjectId(id) ? id : null }, 
+            { schoolId: id }, 
+            { sid: parseInt(id) || null }
+          ] 
+        }).select('-password');
+        
+        if (!school) {
+          return new NextResponse(JSON.stringify({ error: 'School not found' }), {
+            status: 404,
+            headers: { 'Content-Type': 'application/json' }
+          });
+        }
+        
+        return new NextResponse(JSON.stringify(school), {
+          status: 200,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      } catch (err) {
+        console.error('Error fetching school by ID:', err);
+        return new NextResponse(JSON.stringify({ error: 'Invalid ID format or query failed' }), {
+          status: 400,
           headers: { 'Content-Type': 'application/json' }
         });
       }
-      
-      return new NextResponse(JSON.stringify(school), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
     }
 
     // Build query based on parameters
@@ -79,7 +81,10 @@ export async function GET(request: NextRequest) {
     });
   } catch (error) {
     console.error('Error fetching schools:', error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to fetch schools' }), {
+    return new NextResponse(JSON.stringify({ 
+      error: 'Failed to fetch schools',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
@@ -89,7 +94,9 @@ export async function GET(request: NextRequest) {
 // POST endpoint - create a new school
 export async function POST(request: NextRequest) {
   try {
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     const body = await request.json();
     
@@ -106,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Generate verification token
-    const verificationToken = generateVerificationToken();
+    const verificationToken = await generateVerificationToken();
     const verificationTokenExpiry = new Date();
     verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
     
@@ -167,15 +174,15 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
-  } finally {
-    await mongoose.disconnect();
   }
 }
 
 // PATCH endpoint - update a school
 export async function PATCH(request: NextRequest) {
   try {
-    await connect();
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -235,9 +242,12 @@ export async function PATCH(request: NextRequest) {
 // DELETE endpoint - delete a school
 export async function DELETE(request: NextRequest) {
   try {
-    await connect();
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     const { searchParams } = new URL(request.url);
+    // Rest of your DELETE handler remains unchanged
     const id = searchParams.get('id');
     
     if (!id) {

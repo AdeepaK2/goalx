@@ -1,17 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
-import mongoose from 'mongoose';
 import GovernBody from '@/model/governBodySchema';
 import { sendGovernBodyRegistrationNotificationEmail } from '@/utils/emailService';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // POST endpoint for code verification
 export async function POST(request: NextRequest) {
-  let connection = null;
   try {
-    // Connect directly using Mongoose with robust options
-    connection = await mongoose.connect(process.env.MONGO_DB_URI as string, {
-      serverSelectionTimeoutMS: 5000,
-      socketTimeoutMS: 45000,
-    });
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     // Get verification code and email from request body
     const body = await request.json();
@@ -77,14 +74,5 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
-  } finally {
-    // Safely disconnect if connected
-    if (connection) {
-      try {
-        await mongoose.disconnect();
-      } catch (disconnectError) {
-        console.warn('Error disconnecting from MongoDB:', disconnectError);
-      }
-    }
   }
 }
