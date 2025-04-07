@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -20,6 +20,7 @@ interface AdminInfo {
 
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -43,6 +44,12 @@ const AdminDashboard: React.FC = () => {
         setAdminInfo(data.admin);
         console.log('Admin authenticated:', data.admin.name);
         
+        // Check for tab parameter in URL
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+          setActiveTab(tabParam);
+        }
+        
         // Show welcome toast
         toast.success(`Welcome back, ${data.admin.name}!`, {
           position: "top-right",
@@ -60,7 +67,7 @@ const AdminDashboard: React.FC = () => {
     .finally(() => {
       setLoading(false);
     });
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleLogout = async () => {
     try {
