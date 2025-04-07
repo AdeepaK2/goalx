@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect, disconnect } from '@/utils/database';
 import Admin from '@/model/siteAdminSchema';
 import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
+import { ensureConnection } from '@/utils/connectionManager';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'fallback_secret_change_this_in_production';
 const COOKIE_MAX_AGE = 30 * 24 * 60 * 60; // 30 days in seconds
@@ -18,7 +18,9 @@ export async function POST(req: NextRequest) {
       );
     }
     
-    await connect();
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     // Find admin by email
     const admin = await Admin.findOne({ email });
@@ -79,8 +81,6 @@ export async function POST(req: NextRequest) {
       { error: 'Authentication failed' },
       { status: 500 }
     );
-  } finally {
-    await disconnect();
   }
 }
 

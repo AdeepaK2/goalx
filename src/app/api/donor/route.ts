@@ -2,12 +2,14 @@ import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import Donor from '@/model/donorSchema';
 import { generateVerificationToken, sendVerificationEmail } from '@/utils/emailService';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET endpoint - fetch donors
 export async function GET(request: NextRequest) {
   try {
-    // Connect directly using Mongoose
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
     
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -77,17 +79,15 @@ export async function GET(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
-  } finally {
-    // Disconnect after operation
-    await mongoose.disconnect();
   }
 }
 
 // POST endpoint - create a new donor
 export async function POST(request: NextRequest) {
   try {
-    // Connect directly using Mongoose
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
 
     const body = await request.json();
     
@@ -113,7 +113,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Generate verification token
-    const verificationToken = generateVerificationToken();
+    const verificationToken = await generateVerificationToken();
     const verificationTokenExpiry = new Date();
     verificationTokenExpiry.setHours(verificationTokenExpiry.getHours() + 24);
     
@@ -167,17 +167,15 @@ export async function POST(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
-  } finally {
-    // Disconnect after operation
-    await mongoose.disconnect();
   }
 }
 
 // PATCH endpoint - update a donor
 export async function PATCH(request: NextRequest) {
   try {
-    // Connect directly using Mongoose
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -242,17 +240,15 @@ export async function PATCH(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
-  } finally {
-    // Disconnect after operation
-    await mongoose.disconnect();
   }
 }
 
 // DELETE endpoint - delete a donor
 export async function DELETE(request: NextRequest) {
   try {
-    // Connect directly using Mongoose
-    await mongoose.connect(process.env.MONGO_DB_URI as string);
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
 
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
@@ -289,8 +285,5 @@ export async function DELETE(request: NextRequest) {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
-  } finally {
-    // Disconnect after operation
-    await mongoose.disconnect();
   }
 }

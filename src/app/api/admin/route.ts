@@ -1,17 +1,19 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
-import { connect, disconnect } from '@/utils/database';
 import Admin from '@/model/siteAdminSchema';
 import bcrypt from 'bcryptjs';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET all admins
 export async function GET(req: NextRequest) {
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+    
     // Check if request includes an id parameter for getting a specific admin
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
-    
-    await connect();
     
     if (id) {
       // Get specific admin by ID
@@ -36,14 +38,16 @@ export async function GET(req: NextRequest) {
       { error: 'Failed to retrieve admin(s)' },
       { status: 500 }
     );
-  } finally {
-    await disconnect();
   }
 }
 
 // POST - Create a new admin
 export async function POST(req: NextRequest) {
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+    
     const body = await req.json();
     const { name, email, password } = body;
     
@@ -52,16 +56,6 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { error: 'Name, email and password are required' },
         { status: 400 }
-      );
-    }
-    
-    try {
-      await connect();
-    } catch (connectionError) {
-      console.error('MongoDB connection error:', connectionError);
-      return NextResponse.json(
-        { error: 'Database connection failed. Please check network access and MongoDB Atlas whitelist settings.' },
-        { status: 500 }
       );
     }
     
@@ -98,14 +92,16 @@ export async function POST(req: NextRequest) {
       { error: 'Failed to create admin' },
       { status: 500 }
     );
-  } finally {
-    await disconnect();
   }
 }
 
 // PATCH - Update an admin
 export async function PATCH(req: NextRequest) {
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+    
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
     
@@ -124,8 +120,6 @@ export async function PATCH(req: NextRequest) {
       const salt = await bcrypt.genSalt(10);
       updateData.password = await bcrypt.hash(updateData.password, salt);
     }
-    
-    await connect();
     
     // Find and update the admin
     const updatedAdmin = await Admin.findByIdAndUpdate(
@@ -148,14 +142,16 @@ export async function PATCH(req: NextRequest) {
       { error: 'Failed to update admin' },
       { status: 500 }
     );
-  } finally {
-    await disconnect();
   }
 }
 
 // DELETE - Remove an admin
 export async function DELETE(req: NextRequest) {
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+    
     const url = new URL(req.url);
     const id = url.searchParams.get('id');
     
@@ -165,8 +161,6 @@ export async function DELETE(req: NextRequest) {
         { status: 400 }
       );
     }
-    
-    await connect();
     
     // Find and delete the admin
     const deletedAdmin = await Admin.findByIdAndDelete(id);
@@ -188,7 +182,5 @@ export async function DELETE(req: NextRequest) {
       { error: 'Failed to delete admin' },
       { status: 500 }
     );
-  } finally {
-    await disconnect();
   }
 }

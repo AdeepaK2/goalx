@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
 import Sport from '@/model/sportSchema';
 import mongoose from 'mongoose';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET endpoint - fetch sports
 export async function GET(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const name = searchParams.get('name');
@@ -72,10 +73,11 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - create a new sport
 export async function POST(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const body = await request.json();
     
     const sport = new Sport(body);
@@ -119,10 +121,11 @@ export async function POST(request: NextRequest) {
 
 // PATCH endpoint - update a sport
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -175,10 +178,11 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE endpoint - delete a sport
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
