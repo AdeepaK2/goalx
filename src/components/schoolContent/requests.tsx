@@ -83,9 +83,6 @@ const Requests = () => {
                           </div>
                         ))}
                       </div>
-                      <button className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-[#6e11b0] text-sm font-medium rounded-md text-[#6e11b0] bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0]">
-                        <FiPlus className="mr-2" /> Make a new request
-                      </button>
                     </div>
                   </div>
                 </div> {/* Closing tag for grid */}
