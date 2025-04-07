@@ -1,4 +1,4 @@
-import React from 'react'
+import React from "react";
 import { FiPlus, FiAward, FiBox, FiCheckCircle } from "react-icons/fi";
 
 // Define props type
@@ -35,7 +35,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       requestDate: "2025-03-20",
     },
   ];
-  
+
   // Sample data for borrowed items
   const itemsBorrowedData = [
     {
@@ -63,7 +63,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
       borrowedDate: "2025-04-10",
     },
   ];
-  
+
   // Sample data for achievements
   const achievementsData = [
     {
@@ -145,7 +145,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
   return (
     <div>
-        {/* Hero Section - Keeping the gradient as it already uses the correct colors */}
+      {/* Hero Section - Keeping the gradient as it already uses the correct colors */}
       <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
@@ -173,7 +173,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             </div>
             <div className="p-5">
               <div className="space-y-4">
-                {itemsRequestedData.slice(0,2).map((item) => (
+                {itemsRequestedData.slice(0, 2).map((item) => (
                   <div
                     key={item.id}
                     className="bg-gray-50 p-3 rounded-md flex justify-between"
@@ -185,9 +185,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                   </div>
                 ))}
               </div>
-              <button 
+              <button
                 onClick={() => setActiveTab("requests")}
-                className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-[#6e11b0] text-sm font-medium rounded-md text-[#6e11b0] bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0]">
+                className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-[#6e11b0] text-sm font-medium rounded-md text-[#6e11b0] bg-purple-50 hover:bg-purple-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0]"
+              >
                 View all Requests
               </button>
             </div>
@@ -205,7 +206,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             </div>
             <div className="p-5">
               <div className="space-y-4">
-                {itemsBorrowedData.slice(0,2).map((item) => (
+                {itemsBorrowedData.slice(0, 2).map((item) => (
                   <div
                     key={item.id}
                     className="bg-gray-50 p-3 rounded-md flex justify-between"
@@ -217,9 +218,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                   </div>
                 ))}
               </div>
-              <button 
+              <button
                 onClick={() => setActiveTab("borrowals")}
-                className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-[#1e0fbf] text-sm font-medium rounded-md text-[#1e0fbf] bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf]">
+                className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-[#1e0fbf] text-sm font-medium rounded-md text-[#1e0fbf] bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf]"
+              >
                 View all Borrowed Items
               </button>
             </div>
@@ -233,9 +235,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
           <h2 className="text-2xl font-bold text-gray-800 flex items-center">
             <FiAward className="mr-2 text-[#6e11b0]" /> Recent Achievements
           </h2>
-          <button 
+          <button
             onClick={() => setActiveTab("achievements")}
-            className="text-[#1e0fbf] hover:text-purple-800 font-medium flex items-center">
+            className="text-[#1e0fbf] hover:text-purple-800 font-medium flex items-center"
+          >
             View all <span className="ml-1">→</span>
           </button>
         </div>
@@ -270,7 +273,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               </tr>
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
-                {achievementsData.slice(0, 3).map((achievement) => (
+              {achievementsData.slice(0, 3).map((achievement) => (
                 <tr key={achievement.id}>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="flex items-center">
@@ -323,12 +326,12 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               ))}
               <tr>
                 <td colSpan={4} className="">
-                    <div className="flex justify-center py-6">
-                      <button className="group w-full px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center">
-                        <FiPlus className="mr-2 transition-transform group-hover:rotate-90" /> 
-                        <span>Report Achievement</span>
-                      </button>
-                    </div>
+                  <div className="flex justify-center py-6">
+                    <button className="group w-full px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center">
+                      <FiPlus className="mr-2 transition-transform group-hover:rotate-90" />
+                      <span>Report Achievement</span>
+                    </button>
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -336,7 +339,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
-export default Dashboard
+export default Dashboard;

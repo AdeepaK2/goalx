@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { FiMenu, FiX, FiUser, FiLogOut} from "react-icons/fi";
+import { FiMenu, FiX, FiUser, FiLogOut } from "react-icons/fi";
 
 interface NavBarProps {
   activeTab: string;
@@ -34,7 +34,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                 priority
               />
             </div>
-            
+
             {/* Desktop Navigation Links */}
             <div className="hidden md:ml-10 md:flex md:space-x-8">
               {tabs.map((tab) => (
@@ -52,7 +52,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               ))}
             </div>
           </div>
-          
+
           {/* School Logo and User Section */}
           <div className="hidden md:flex items-center">
             <div className="flex items-center pr-4 border-r border-gray-200">
@@ -64,9 +64,11 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                 className="h-10 w-auto"
                 priority
               />
-              <span className="ml-2 text-gray-700 font-medium">Central High School</span>
+              <span className="ml-2 text-gray-700 font-medium">
+                Central High School
+              </span>
             </div>
-            
+
             <div className="flex items-center ml-4">
               <div className="relative">
                 <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
@@ -83,15 +85,21 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             </div>
           </div>
-          
+
           {/* Mobile menu button */}
           <div className="flex items-center md:hidden">
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
             >
-              <span className="sr-only">{mobileMenuOpen ? 'Close menu' : 'Open menu'}</span>
-              {mobileMenuOpen ? <FiX className="h-6 w-6" /> : <FiMenu className="h-6 w-6" />}
+              <span className="sr-only">
+                {mobileMenuOpen ? "Close menu" : "Open menu"}
+              </span>
+              {mobileMenuOpen ? (
+                <FiX className="h-6 w-6" />
+              ) : (
+                <FiMenu className="h-6 w-6" />
+              )}
             </button>
           </div>
         </div>
@@ -134,8 +142,12 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                 </div>
               </div>
               <div className="ml-3">
-                <div className="text-base font-medium text-gray-800">Admin User</div>
-                <div className="text-sm font-medium text-gray-500">admin@centralhs.edu</div>
+                <div className="text-base font-medium text-gray-800">
+                  Admin User
+                </div>
+                <div className="text-sm font-medium text-gray-500">
+                  admin@centralhs.edu
+                </div>
               </div>
             </div>
             <div className="mt-3 space-y-1">

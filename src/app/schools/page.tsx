@@ -22,7 +22,7 @@ const Page = () => {
         {activeTab === "borrowals" && <Borrowals />}
         {activeTab === "achievements" && <Achievements />}
       </main>
-      
+
       <Footer />
     </div>
   );

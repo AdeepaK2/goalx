@@ -1,9 +1,9 @@
-import React from 'react'
+import React from "react";
 
 const Footer = () => {
   return (
     <div>
-        <footer className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-white py-8 mt-12">
+      <footer className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-white py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col md:flex-row justify-between items-center">
             <div className="mb-4 md:mb-0">
@@ -30,7 +30,7 @@ const Footer = () => {
         </div>
       </footer>
     </div>
-  )
-}
+  );
+};
 
-export default Footer
+export default Footer;
