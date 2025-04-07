@@ -18,8 +18,8 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
 
   return (
     <div className="h-screen flex flex-col w-64 bg-white border-r border-gray-200">
-      <div className="flex items-center justify-center h-16 border-b border-gray-200 p-4">
-        <div className="relative h-10 w-32">
+      <div className="flex items-center justify-center h-20 border-b border-gray-200 p-4">
+        <div className="relative h-14 w-40">
           <Image 
             src="/logo.png" 
             alt="GoalX Logo" 
@@ -43,7 +43,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
                 }`}
               >
                 <svg 
-                  className={`w-6 h-6 transition duration-75 ${activeTab === item.id ? 'text-white' : 'text-gray-500'}`} 
+                  className={`flex-shrink-0 w-6 h-6 transition duration-75 ${activeTab === item.id ? 'text-white' : 'text-gray-500'}`} 
                   fill="none" 
                   stroke="currentColor" 
                   viewBox="0 0 24 24" 
@@ -51,7 +51,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
                 >
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d={item.icon}></path>
                 </svg>
-                <span className="ml-3">{item.name}</span>
+                <span className="ml-3 text-left">{item.name}</span>
               </button>
             </li>
           ))}
@@ -61,7 +61,7 @@ const Sidebar: React.FC<SidebarProps> = ({ activeTab, setActiveTab, onLogout }) 
       <div className="p-4 border-t border-gray-200">
         <button
           onClick={onLogout}
-          className="flex items-center p-2 w-full text-base font-normal text-gray-700 rounded-lg hover:bg-gray-100"
+          className="flex items-center p-2 w-full text-base font-normal text-gray-700 rounded-lg hover:bg-gray-100 border border-red-500"
         >
           <svg 
             className="w-6 h-6 text-gray-500" 
