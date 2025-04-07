@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -14,14 +14,6 @@ const AdminLoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
 
-  // Check if user is already logged in
-  useEffect(() => {
-    const token = localStorage.getItem('adminToken');
-    if (token) {
-      router.push('/admin');
-    }
-  }, [router]);
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     handleAdminLogin(email, password);
@@ -32,6 +24,8 @@ const AdminLoginPage: React.FC = () => {
     setError(null);
     
     try {
+      console.log('Starting login request to /api/auth/admin...');
+      
       // API call to backend auth service
       const response = await fetch('/api/auth/admin', {
         method: 'POST',
@@ -39,26 +33,30 @@ const AdminLoginPage: React.FC = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ email, password }),
+        credentials: 'include' // Important: include cookies
       });
       
       const data = await response.json();
+      console.log('Login response received:', response.status);
       
       if (!response.ok) {
         throw new Error(data.error || 'Authentication failed');
       }
       
-      // Store token in localStorage
-      localStorage.setItem('adminToken', data.token);
+      // Show success message
+      toast.success('Login successful!');
+
+      // Redirect to dashboard - no need to store token in localStorage 
+      // as it's now in an HTTP-only cookie
+      setTimeout(() => {
+        router.push('/admin/dashboard');
+      }, 250);
       
-      // Store admin info
-      localStorage.setItem('adminInfo', JSON.stringify(data.admin));
-      
-      // Redirect to admin dashboard
-      router.push('/admin/dashboard');
     } catch (err) {
       console.error('Login failed:', err);
-      setError(err instanceof Error ? err.message : 'Invalid email or password. Please try again.');
-      toast.error(err instanceof Error ? err.message : 'Invalid email or password. Please try again.');
+      const errorMessage = err instanceof Error ? err.message : 'Invalid email or password. Please try again.';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }

@@ -3,6 +3,8 @@
 import React, { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { toast, ToastContainer } from 'react-toastify';
+import 'react-toastify/dist/ReactToastify.css';
 
 interface AdminInfo {
   id: string;
@@ -16,29 +18,56 @@ const AdminDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check if admin token exists
-    const token = localStorage.getItem('adminToken');
-    if (!token) {
-      router.push('/admin/login');
-      return;
-    }
-
-    // Get admin info from localStorage
-    const adminInfoStr = localStorage.getItem('adminInfo');
-    if (adminInfoStr) {
-      try {
-        setAdminInfo(JSON.parse(adminInfoStr));
-      } catch (error) {
-        console.error('Failed to parse admin info:', error);
+    console.log('Admin dashboard loaded, checking authentication...');
+    
+    // Verify authentication using the verification endpoint
+    fetch('/api/auth/admin', {
+      method: 'GET',
+      credentials: 'include' // Important: include cookies
+    })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error('Not authenticated');
       }
-    }
-    setLoading(false);
+      return response.json();
+    })
+    .then(data => {
+      if (data.authenticated && data.admin) {
+        setAdminInfo(data.admin);
+        console.log('Admin authenticated:', data.admin.name);
+        
+        // Show welcome toast
+        toast.success(`Welcome back, ${data.admin.name}!`, {
+          position: "top-right",
+          autoClose: 3000,
+        });
+      } else {
+        // If not authenticated for some reason, redirect to login
+        router.push('/admin/login');
+      }
+    })
+    .catch(error => {
+      console.error('Authentication check failed:', error);
+      router.push('/admin/login');
+    })
+    .finally(() => {
+      setLoading(false);
+    });
   }, [router]);
 
-  const handleLogout = () => {
-    localStorage.removeItem('adminToken');
-    localStorage.removeItem('adminInfo');
-    router.push('/admin/login');
+  const handleLogout = async () => {
+    try {
+      await fetch('/api/auth/admin', {
+        method: 'DELETE',
+        credentials: 'include'
+      });
+      
+      // Redirect to login page
+      router.push('/admin/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+      toast.error('Logout failed. Please try again.');
+    }
   };
 
   if (loading) {
@@ -51,6 +80,7 @@ const AdminDashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50">
+      <ToastContainer />
       <div className="bg-white shadow">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between h-16 items-center">
