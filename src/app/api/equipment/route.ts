@@ -1,11 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
+import { ensureConnection } from '@/utils/connectionManager';
 import Equipment from '@/model/equipmentSchema';
 import mongoose from 'mongoose';
 
 // GET endpoint - fetch equipment
 export async function GET(request: NextRequest) {
-  const error = await connect();
+  const error = await ensureConnection();
   if (error) return error;
 
   try {
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - create new equipment
 export async function POST(request: NextRequest) {
-  const error = await connect();
+  const error = await ensureConnection();
   if (error) return error;
 
   try {
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
 
 // PATCH endpoint - update equipment
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
+  const error = await ensureConnection();
   if (error) return error;
 
   try {
@@ -191,7 +191,7 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE endpoint - delete equipment
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
+  const error = await ensureConnection();
   if (error) return error;
 
   try {

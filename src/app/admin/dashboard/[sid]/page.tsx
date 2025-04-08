@@ -74,6 +74,11 @@ interface EquipmentRequest {
   }[];
 }
 
+interface SchoolDetailsPageProps {
+  params: Promise<{ sid: string }>; // Keep params as a Promise
+  searchParams?: Promise<any>; // Update searchParams to match the expected type
+}
+
 // Sri Lankan provinces and districts for the form
 const sriLankanProvinces = [
   'Central Province',
@@ -100,7 +105,7 @@ const districtsByProvince: Record<string, string[]> = {
   'Western Province': ['Colombo', 'Gampaha', 'Kalutara']
 };
 
-export default function SchoolDetailsPage({ params }: { params: { sid: string } }) {
+export default function SchoolDetailsPage({ params }: SchoolDetailsPageProps) {
   const router = useRouter();
   const [school, setSchool] = useState<School | null>(null);
   const [editedSchool, setEditedSchool] = useState<School | null>(null);
@@ -118,8 +123,8 @@ export default function SchoolDetailsPage({ params }: { params: { sid: string } 
     const fetchSchoolData = async () => {
       setLoading(true);
       try {
-        // Fetch school details
-        const schoolRes = await fetch(`/api/school?id=${params.sid}`);
+        const resolvedParams = await params; // Resolve the promise
+        const schoolRes = await fetch(`/api/school?id=${resolvedParams.sid}`);
         if (!schoolRes.ok) throw new Error('Failed to fetch school details');
         const schoolData = await schoolRes.json();
         setSchool(schoolData);
@@ -168,72 +173,72 @@ export default function SchoolDetailsPage({ params }: { params: { sid: string } 
     };
 
     fetchSchoolData();
-  }, [params.sid]);
+  }, [params]);
 
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const handleInputChange = async (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    
+
     if (!editedSchool) return;
-    
+
     if (name.includes('.')) {
       // Handle nested properties like location.province
       const [parent, child] = name.split('.');
-      
-      setEditedSchool(prev => {
+
+      setEditedSchool((prev) => {
         if (!prev) return prev;
-        
+
         if (parent === 'location') {
           return {
             ...prev,
             location: {
               ...prev.location,
-              [child]: value
-            }
+              [child]: value,
+            },
           };
         } else if (parent === 'contact') {
           return {
             ...prev,
             contact: {
               ...prev.contact || {},
-              [child]: value
-            }
+              [child]: value,
+            },
           };
         }
         return prev;
       });
-      
+
       // Auto-reset district when province changes
       if (name === 'location.province') {
-        setEditedSchool(prev => {
+        setEditedSchool((prev) => {
           if (!prev) return prev;
           return {
             ...prev,
             location: {
               ...prev.location,
-              district: ''
-            }
+              district: '',
+            },
           };
         });
       }
     } else {
       // Handle top-level properties
-      setEditedSchool(prev => {
+      setEditedSchool((prev) => {
         if (!prev) return prev;
         return {
           ...prev,
-          [name]: value
+          [name]: value,
         };
       });
     }
   };
-  
+
   const saveSchoolChanges = async () => {
     if (!editedSchool) return;
-    
+
     setIsSaving(true);
     setError('');
     setSaveSuccess(false);
-    
+
     try {
       const response = await fetch(`/api/school?id=${editedSchool._id}`, {
         method: 'PATCH',
@@ -247,22 +252,22 @@ export default function SchoolDetailsPage({ params }: { params: { sid: string } 
           principalName: editedSchool.principalName
         }),
       });
-      
+
       if (!response.ok) {
         const errorData = await response.json();
         throw new Error(errorData.error || 'Failed to update school details');
       }
-      
+
       const updatedSchool = await response.json();
       setSchool(updatedSchool);
       setSaveSuccess(true);
-      
+
       // Exit edit mode after successful save
       setTimeout(() => {
         setIsEditing(false);
         setSaveSuccess(false);
       }, 1500);
-      
+
     } catch (err) {
       console.error('Error updating school:', err);
       setError('Failed to update school details. Please try again.');
