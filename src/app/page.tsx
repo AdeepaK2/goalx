@@ -1,7 +1,6 @@
 // app/page.tsx
 import Header from '../components/Header'
-import Achievements from '../components/Achievements'
-import OurStory from '../components/OurStory'
+import HeroSection from '../components/HeroSection'
 import RegistrationButtons from '../components/RegistrationButtons'
 import Statistics from '../components/Statistics'
 import TopDonations from '../components/TopDonations'
@@ -12,8 +11,7 @@ export default function Home() {
   return (
     <main className="flex min-h-screen flex-col items-center justify-between">
       <Header />
-      <Achievements />
-      <OurStory />
+      <HeroSection />
       <RegistrationButtons />
       <Statistics />
       <TopDonations />
