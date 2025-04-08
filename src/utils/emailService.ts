@@ -11,7 +11,7 @@ const transporter = nodemailer.createTransport({
 });
 
 // Base URL for all links in emails
-const getBaseUrl = (): string => {
+const getBaseUrl = async (): Promise<string> => {
   return process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
 };
 
@@ -38,8 +38,8 @@ export const sendEmail = async (
   }
 };
 
-// Generate a 4-digit verification code
-export const generateVerificationToken = (): string => {
+// Generate a 4-digit verification code - MAKE THIS ASYNC
+export const generateVerificationToken = async (): Promise<string> => {
   // Generate a random number between 1000 and 9999
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
@@ -50,7 +50,7 @@ export const sendVerificationEmail = async (
   verificationCode: string,
   displayName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const verificationUrl = `${baseUrl}/verify`;
   
   const htmlContent = `
@@ -83,7 +83,7 @@ export const sendSchoolVerificationEmail = async (
   verificationCode: string,
   schoolName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const verificationUrl = `${baseUrl}/verify?type=school&email=${encodeURIComponent(email)}`;
   
   const htmlContent = `
@@ -115,7 +115,7 @@ export const sendGovernBodyVerificationEmail = async (
   verificationCode: string,
   organizationName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const verificationUrl = `${baseUrl}/verify?type=govern&email=${encodeURIComponent(email)}`;
   
   const htmlContent = `
@@ -146,7 +146,7 @@ export const sendWelcomeEmail = async (
   email: string,
   displayName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const dashboardUrl = `${baseUrl}/dashboard`;
   
   const htmlContent = `
@@ -176,7 +176,7 @@ export const sendPasswordResetEmail = async (
   resetToken: string,
   displayName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
   
   const htmlContent = `
@@ -209,7 +209,7 @@ export const sendDonationConfirmationEmail = async (
   donationId: string,
   donationDate: Date
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   const donationsUrl = `${baseUrl}/donations`;
   const formattedDate = donationDate.toLocaleDateString('en-US', { 
     year: 'numeric', 
@@ -281,7 +281,7 @@ export const sendSchoolRegistrationNotificationEmail = async (
   email: string,
   schoolName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -309,7 +309,7 @@ export const sendGovernBodyRegistrationNotificationEmail = async (
   email: string,
   organizationName: string
 ): Promise<void> => {
-  const baseUrl = getBaseUrl();
+  const baseUrl = await getBaseUrl();
   
   const htmlContent = `
     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">

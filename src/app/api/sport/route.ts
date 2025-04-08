@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
 import Sport from '@/model/sportSchema';
 import mongoose from 'mongoose';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET endpoint - fetch sports
 export async function GET(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const name = searchParams.get('name');
@@ -16,21 +17,15 @@ export async function GET(request: NextRequest) {
 
     // If ID is provided, fetch specific sport
     if (id) {
-      const sport = await Sport.findOne({ 
-        $or: [{ _id: id }, { sportId: id }] 
+      const sport = await Sport.findOne({
+        $or: [{ _id: id }, { sportId: id }],
       });
-      
+
       if (!sport) {
-        return new NextResponse(JSON.stringify({ error: 'Sport not found' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
+        return NextResponse.json({ error: 'Sport not found' }, { status: 404 });
       }
-      
-      return new NextResponse(JSON.stringify(sport), {
-        status: 200,
-        headers: { 'Content-Type': 'application/json' }
-      });
+
+      return NextResponse.json(sport, { status: 200 });
     }
 
     // Build query based on parameters
@@ -39,180 +34,151 @@ export async function GET(request: NextRequest) {
     if (category) query.categories = { $in: [category] };
 
     // Fetch sports with optional pagination
-    const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const page = parseInt(searchParams.get('page') || '1', 10);
+    const limit = parseInt(searchParams.get('limit') || '10', 10);
     const skip = (page - 1) * limit;
 
-    const sports = await Sport.find(query)
-      .skip(skip)
-      .limit(limit);
-    
+    const sports = await Sport.find(query).skip(skip).limit(limit);
     const total = await Sport.countDocuments(query);
 
-    return new NextResponse(JSON.stringify({
-      sports,
-      pagination: {
-        total,
-        page,
-        limit,
-        pages: Math.ceil(total / limit)
-      }
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    return NextResponse.json(
+      {
+        sports,
+        pagination: {
+          total,
+          page,
+          limit,
+          pages: Math.ceil(total / limit),
+        },
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error('Error fetching sports:', error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to fetch sports' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Error message:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return NextResponse.json(
+      { error: 'Failed to process request', details: errorMessage },
+      { status: 500 }
+    );
   }
 }
 
 // POST endpoint - create a new sport
 export async function POST(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const body = await request.json();
-    
+
+    // Validate required fields
+    if (!body.sportName || !body.description) {
+      return NextResponse.json(
+        { error: 'sportName and description are required' },
+        { status: 400 }
+      );
+    }
+
     const sport = new Sport(body);
     await sport.save();
-    
-    return new NextResponse(JSON.stringify(sport), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error: any) {
-    console.error('Error creating sport:', error);
-    
-    // Handle validation errors
-    if (error instanceof mongoose.Error.ValidationError) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Validation error', 
-        details: error.errors 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Handle duplicate key error
-    if (error.code === 11000) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Duplicate entry', 
-        field: Object.keys(error.keyPattern)[0]
-      }), {
-        status: 409,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    return new NextResponse(JSON.stringify({ error: 'Failed to create sport' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+
+    return NextResponse.json(sport, { status: 201 });
+  } catch (error) {
+    console.error('Error message:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return NextResponse.json(
+      { error: 'Failed to process request', details: errorMessage },
+      { status: 500 }
+    );
   }
 }
 
 // PATCH endpoint - update a sport
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
-      return new NextResponse(JSON.stringify({ error: 'Sport ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json(
+        { error: 'Sport ID is required' },
+        { status: 400 }
+      );
     }
-    
+
     const body = await request.json();
-    
+
     // Find by _id or sportId
     const sport = await Sport.findOneAndUpdate(
       { $or: [{ _id: id }, { sportId: id }] },
       { $set: body },
       { new: true, runValidators: true }
     );
-    
+
     if (!sport) {
-      return new NextResponse(JSON.stringify({ error: 'Sport not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ error: 'Sport not found' }, { status: 404 });
     }
-    
-    return new NextResponse(JSON.stringify(sport), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error: any) {
-    console.error('Error updating sport:', error);
-    
-    if (error instanceof mongoose.Error.ValidationError) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Validation error', 
-        details: error.errors 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    return new NextResponse(JSON.stringify({ error: 'Failed to update sport' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+
+    return NextResponse.json(sport, { status: 200 });
+  } catch (error) {
+    console.error('Error message:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return NextResponse.json(
+      { error: 'Failed to process request', details: errorMessage },
+      { status: 500 }
+    );
   }
 }
 
 // DELETE endpoint - delete a sport
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
-    
+
     if (!id) {
-      return new NextResponse(JSON.stringify({ error: 'Sport ID is required' }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json(
+        { error: 'Sport ID is required' },
+        { status: 400 }
+      );
     }
-    
+
     // Find by _id or sportId
-    const deletedSport = await Sport.findOneAndDelete(
-      { $or: [{ _id: id }, { sportId: id }] }
-    );
-    
+    const deletedSport = await Sport.findOneAndDelete({
+      $or: [{ _id: id }, { sportId: id }],
+    });
+
     if (!deletedSport) {
-      return new NextResponse(JSON.stringify({ error: 'Sport not found' }), {
-        status: 404,
-        headers: { 'Content-Type': 'application/json' }
-      });
+      return NextResponse.json({ error: 'Sport not found' }, { status: 404 });
     }
-    
-    return new NextResponse(JSON.stringify({ 
-      message: 'Sport deleted successfully',
-      deletedId: id 
-    }), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+
+    return NextResponse.json(
+      { message: 'Sport deleted successfully', deletedId: id },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error('Error deleting sport:', error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to delete sport' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    console.error('Error message:', error);
+
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+
+    return NextResponse.json(
+      { error: 'Failed to process request', details: errorMessage },
+      { status: 500 }
+    );
   }
 }

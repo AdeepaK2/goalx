@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { connect } from '@/utils/database';
 import Donation from '@/model/donationSchema';
 import mongoose from 'mongoose';
+import { ensureConnection } from '@/utils/connectionManager';
 
 // GET endpoint - fetch donations
 export async function GET(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const donorId = searchParams.get('donor');
@@ -103,10 +104,11 @@ export async function GET(request: NextRequest) {
 
 // POST endpoint - create a new donation
 export async function POST(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const body = await request.json();
     
     // Validate required fields
@@ -193,10 +195,11 @@ export async function POST(request: NextRequest) {
 
 // PATCH endpoint - update a donation
 export async function PATCH(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     
@@ -285,10 +288,11 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE endpoint - delete a donation
 export async function DELETE(request: NextRequest) {
-  const error = await connect();
-  if (error) return error;
-
   try {
+    // Ensure database connection
+    const connectionError = await ensureConnection();
+    if (connectionError) return connectionError;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     

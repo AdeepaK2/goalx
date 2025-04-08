@@ -37,7 +37,8 @@ const counterSchema = new mongoose.Schema({
   seq: Number
 });
 
-const Counter = mongoose.model('Counter', counterSchema);
+// Use existing model if it exists, otherwise define it
+const Counter = mongoose.models.Counter || mongoose.model('Counter', counterSchema);
 
 const sportSchema = new mongoose.Schema({
   sportId: { type: String, unique: true, index: true },
@@ -47,13 +48,12 @@ const sportSchema = new mongoose.Schema({
 });
 
 // Create indexes for common search patterns
-sportSchema.index({ sportName: 1 });
 sportSchema.index({ categories: 1 });
 
 // Add pre-save hook for ID generation
 sportSchema.pre('save', async function(next) {
   const doc = this;
-  
+
   // Only generate sportId if not already set
   if (!doc.sportId) {
     try {
@@ -62,14 +62,14 @@ sportSchema.pre('save', async function(next) {
         { $inc: { seq: 1 } },
         { new: true, upsert: true }
       );
-      
+
       // Format to ensure 4 digits with leading zeros
       const seqValue = counter?.seq ?? 1;
       const formattedSeq = seqValue.toString().padStart(4, '0');
-      
+
       // Generate sportId
       doc.sportId = `SPT${formattedSeq}`;
-      
+
       next();
     } catch (error) {
       return next(error as Error);
@@ -79,4 +79,5 @@ sportSchema.pre('save', async function(next) {
   }
 });
 
-export default mongoose.model('Sport', sportSchema);
+// Use existing model if it exists, otherwise define it
+export default mongoose.models.Sport || mongoose.model('Sport', sportSchema);
