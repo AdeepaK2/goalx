@@ -229,8 +229,6 @@ export async function middleware(request: NextRequest) {
 // Update matcher to include donor routes
 export const config = {
   matcher: [
-    '/admin/:path*',
-    '/api/admin/:path*',
     '/school/:path*',
     '/schools/:path*',
     '/donor/:path*',
