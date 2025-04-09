@@ -30,11 +30,12 @@ export default function Header() {
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-3">
-            <div className="relative w-12 h-12 overflow-hidden rounded-full border-2 border-[#1e0fbf] shadow-md">
+            <div className="relative w-12 h-12 overflow-hidden rounded-full  shadow-md">
               {/* Replace with your actual logo path */}
-              <div className="w-full h-full bg-[#1e0fbf] flex items-center justify-center text-white text-xl font-bold">
-                S
-              </div>
+              <div className="w-full h-full  flex items-center justify-center ">
+  <img src="/logo.png" alt="logo" />
+</div>
+
             </div>
             <span className="text-2xl font-bold text-gray-800 tracking-tight">
               Goal<span className="text-[#1e0fbf]">X</span>
@@ -101,7 +102,7 @@ export default function Header() {
               How It Works
             </Link>
             <Link href="/contact" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#1e0fbf] hover:bg-gray-50 rounded-md transition-colors duration-300">
-              Contact
+              Contact Us 
             </Link>
             <div className="pt-4 pb-3 border-t border-gray-200">
               <button className="w-full px-5 py-2 text-[#1e0fbf] font-medium border-2 border-[#1e0fbf] rounded-full hover:bg-[#1e0fbf] hover:text-white transition-colors duration-300 mb-2">
