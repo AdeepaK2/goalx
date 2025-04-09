@@ -170,35 +170,35 @@ export const sendWelcomeEmail = async (
   await sendEmail(email, 'Welcome to GoalX!', htmlContent);
 };
 
-// Send password reset email
-export const sendPasswordResetEmail = async (
-  email: string,
-  resetToken: string,
-  displayName: string
-): Promise<void> => {
-  const baseUrl = await getBaseUrl();
-  const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+// // Send password reset email
+// export const sendPasswordResetEmail = async (
+//   email: string,
+//   resetToken: string,
+//   displayName: string
+// ): Promise<void> => {
+//   const baseUrl = await getBaseUrl();
+//   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
   
-  const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Reset Your Password</h2>
-      <p>Hello ${displayName},</p>
-      <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
+//   const htmlContent = `
+//     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+//       <h2>Reset Your Password</h2>
+//       <p>Hello ${displayName},</p>
+//       <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
       
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${resetUrl}" style="background-color: #1e0fbf; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-          Reset Password
-        </a>
-      </div>
+//       <div style="text-align: center; margin: 30px 0;">
+//         <a href="${resetUrl}" style="background-color: #1e0fbf; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
+//           Reset Password
+//         </a>
+//       </div>
       
-      <p>This link will expire in 1 hour for security reasons.</p>
+//       <p>This link will expire in 1 hour for security reasons.</p>
       
-      <p>Best regards,<br>The GoalX Team</p>
-    </div>
-  `;
+//       <p>Best regards,<br>The GoalX Team</p>
+//     </div>
+//   `;
 
-  await sendEmail(email, 'Reset Your GoalX Password', htmlContent);
-};
+//   await sendEmail(email, 'Reset Your GoalX Password', htmlContent);
+// };
 
 // Send donation confirmation email
 export const sendDonationConfirmationEmail = async (
@@ -331,3 +331,96 @@ export const sendGovernBodyRegistrationNotificationEmail = async (
 
   await sendEmail(email, 'Your Governing Body Registration - Next Steps', htmlContent);
 };
+
+
+
+export const sendPasswordResetEmail = async (
+  email: string,
+  otpCode: string,
+  displayName: string
+): Promise<void> => {
+  const baseUrl = await getBaseUrl();
+  const resetUrl = `${baseUrl}/reset-password`;
+  
+  const htmlContent = `
+    <div>
+        <style>
+            body {
+                font-family: Arial, sans-serif;
+                background-color: #f4f4f4;
+                margin: 0;
+                padding: 0;
+            }
+            .header {
+                background: linear-gradient(90deg, #1e0fbf, #6e11b0);
+                color: #ffffff;
+                padding: 20px;
+                text-align: center;
+            }
+            .header h2 {
+                margin: 0;
+                font-size: 24px;
+            }
+            .content {
+                padding: 30px;
+                color: #333333;
+                line-height: 1.6;
+            }
+            .otp-box {
+                margin: 25px 0;
+                padding: 25px;
+                border: 1px solid #e0e0e0;
+                border-radius: 6px;
+                background-color: #f9f9f9;
+                text-align: center;
+            }
+            .otp-box h3 {
+                margin-top: 0;
+                color: #1e0fbf;
+                font-size: 18px;
+            }
+            .otp-code {
+                font-family: 'Courier New', Courier, monospace;
+                font-size: 32px;
+                font-weight: bold;
+                letter-spacing: 6px;
+                color: #6e11b0;
+                margin: 15px 0;
+            }
+            .otp-validity {
+                font-size: 14px;
+                color: #555555;
+            }
+            .footer {
+                padding: 20px 30px;
+                font-size: 14px;
+                color: #777777;
+                border-top: 1px solid #e0e0e0;
+            }
+            .footer p {
+                margin: 5px 0;
+            }
+        </style>
+        <div class="header">
+            <h2>Password Reset Request - GoalX</h2>
+        </div>
+        <div class="content">
+            <p>Dear ${displayName},</p>
+            <p>We received a request to reset your password. Use the code below to complete your password reset:</p>
+
+            <div class="otp-box">
+              <h3>Your One-Time Password</h3>
+              <p class="otp-code">${otpCode}</p>
+              <p class="otp-validity">This code is valid for 10 minutes.</p>
+            </div>
+
+            <p>If you didn't request a password reset, please ignore this email or contact our support team if you have concerns about your account security.</p>
+        </div>
+        <div class="footer">
+            <p>Best regards,<br>The GoalX Team</p>
+        </div>
+      </div>
+  `;
+
+  await sendEmail(email, 'Reset Your GoalX Password', htmlContent);
+}
