@@ -36,6 +36,33 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     },
   ];
 
+  const itemsDonatedData = [
+    {
+      id: 1,
+      name: "Soccer Balls (x5)",
+      donor: "John Doe",
+      donatedDate: "2025-04-01",
+    },
+    {
+      id: 2,
+      name: "Volleyball Net",
+      donor: "John Doe",
+      donatedDate: "2025-04-05",
+    },
+    {
+      id: 3,
+      name: "Badminton Rackets (x10)",
+      donor: "John Doe",
+      donatedDate: "2025-04-08",
+    },
+    {
+      id: 4,
+      name: "Tennis Balls (x30)",
+      donor: "John Doe",
+      donatedDate: "2025-04-10",
+    },
+  ];
+
   // Sample data for borrowed items
   const itemsBorrowedData = [
     {
@@ -194,6 +221,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             </div>
           </div>
 
+          
+
           {/* Items Borrowed Card */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
@@ -228,6 +257,41 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
           </div>
         </div>
       </div>
+
+      {/* Donations Received Card */}
+      <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                <FiCheckCircle className="mr-2 text-[#1e0fbf]" /> Donations Recieved
+              </h2>
+            </div>
+            <div className="p-5">
+              <div className="space-y-4">
+                {itemsDonatedData.slice(0, 2).map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-gray-50 p-3 rounded-md flex justify-between items-center space-x-4"
+                  >
+                    <span className="text-gray-700 flex-1 min-w-0">
+                      {item.name}
+                    </span>
+                    <span className="text-[#6e11b0] text-sm text-right w-28 flex-shrink-0">
+                      Received {item.donatedDate.substring(5)}
+                    </span>
+                    <span className="text-[#1e0fbf] text-sm text-right w-28 flex-shrink-0">
+                      By {item.donor}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setActiveTab("donations")}
+                className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-[#1e0fbf] text-sm font-medium rounded-md text-[#1e0fbf] bg-indigo-50 hover:bg-indigo-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf]"
+              >
+                View all Donations
+              </button>
+            </div>
+          </div>
 
       {/* Recent Achievements */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
