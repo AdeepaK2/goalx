@@ -50,6 +50,5 @@ governBodySchema.pre('findOneAndUpdate', function() {
   this.set({ updatedAt: new Date() });
 });
 
-const GovernBody = mongoose.model('GovernBody', governBodySchema);
-
-export default GovernBody;
+// Export the model, checking if it already exists first
+export default mongoose.models.GovernBody || mongoose.model('GovernBody', governBodySchema);

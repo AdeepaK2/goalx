@@ -91,4 +91,4 @@ playSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.model<IPlay>('Play', playSchema);
+export default mongoose.models.Play || mongoose.model<IPlay>('Play', playSchema);

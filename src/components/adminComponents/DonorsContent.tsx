@@ -242,7 +242,7 @@ const DonorsContent: React.FC = () => {
                   {topDonors.map((donor) => (
                     <tr key={donor.donorId} className="hover:bg-gray-50">
                       <td className="py-2 px-4 text-sm font-medium text-gray-900">{donor.displayName}</td>
-                      <td className="py-2 px-4 text-sm text-gray-900">₹{donor.totalAmount.toLocaleString()}</td>
+                      <td className="py-2 px-4 text-sm text-gray-900">Rs{donor.totalAmount.toLocaleString()}</td>
                       <td className="py-2 px-4 text-sm text-gray-500">{donor.donationCount}</td>
                       <td className="py-2 px-4 text-sm text-gray-500">
                         {donor.lastDonation ? new Date(donor.lastDonation.date).toLocaleDateString() : 'N/A'}
@@ -304,8 +304,8 @@ const DonorsContent: React.FC = () => {
             >
               <CartesianGrid strokeDasharray="3 3" />
               <XAxis dataKey="month" />
-              <YAxis tickFormatter={(value) => `₹${value/1000}k`} />
-              <Tooltip formatter={(value) => [`₹${value.toLocaleString()}`, 'Amount']} />
+              <YAxis tickFormatter={(value) => `Rs${value/1000}k`} />
+              <Tooltip formatter={(value) => [`Rs${value.toLocaleString()}`, 'Amount']} />
               <Legend />
               <Bar dataKey="amount" name="Donation Amount" fill="#1e0fbf" />
             </BarChart>
@@ -388,7 +388,7 @@ const DonorsContent: React.FC = () => {
                       </span>
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">
-                      {stats ? `₹${stats.totalAmount.toLocaleString()}` : '₹0'}
+                      {stats ? `Rs${stats.totalAmount.toLocaleString()}` : '₹0'}
                     </td>
                     <td className="py-4 px-4 text-sm text-gray-500">
                       {stats?.lastDonation 
