@@ -17,6 +17,9 @@ export async function middleware(request: NextRequest) {
   // Check if the request is for a donor page
   const isDonorRoute = pathname.startsWith('/donor') || pathname.startsWith('/donors');
   
+  // Check if the request is for a governing body page
+  const isGovernBodyRoute = pathname.startsWith('/govern-bodies');
+  
   const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'fallback_secret_change_this_in_production'
   );
@@ -123,6 +126,44 @@ export async function middleware(request: NextRequest) {
     }
   }
   
+  // Handle governing body routes
+  if (isGovernBodyRoute) {
+    console.log('Checking governing body route protection');
+    const governToken = request.cookies.get('govern_token')?.value;
+    console.log('Govern token present:', !!governToken);
+    
+    if (!governToken) {
+      console.log('No govern token, redirecting to login');
+      const url = new URL('/login', request.url);
+      return NextResponse.redirect(url);
+    }
+    
+    try {
+      // Verify token
+      const { payload } = await jwtVerify(governToken, JWT_SECRET);
+      console.log('Govern token verified successfully, role:', payload.role);
+      
+      // Check if token has governBody role
+      if (payload.role !== 'governBody') {
+        console.log('Invalid role in token:', payload.role);
+        const url = new URL('/login', request.url);
+        return NextResponse.redirect(url);
+      }
+      
+      console.log('Govern token validation successful, proceeding to govern body route');
+    } catch (error) {
+      console.error('Govern token verification failed:', error);
+      // Token verification failed, redirect to login
+      const url = new URL('/login', request.url);
+      const response = NextResponse.redirect(url);
+      
+      // Clear the invalid token
+      response.cookies.delete('govern_token');
+      
+      return response;
+    }
+  }
+  
   // If already logged in as admin and trying to access login page, redirect to dashboard
   if (pathname === '/admin/login') {
     const adminToken = request.cookies.get('adminToken')?.value;
@@ -194,6 +235,7 @@ export const config = {
     '/schools/:path*',
     '/donor/:path*',
     '/donors/:path*',
+    '/govern-bodies/:path*',
     '/login'
   ],
 };

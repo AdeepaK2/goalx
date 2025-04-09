@@ -219,52 +219,117 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
 const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: string) => Promise<void>}> = ({ onLogin }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, password);
+    setError('');
+    setSuccess('');
+    setIsLoading(true);
+    
+    try {
+      // For debugging - log the attempt
+      console.log('Attempting governing body login with email:', email);
+      
+      const response = await fetch('/api/auth/govern/login', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include' // Important: include credentials
+      });
+      
+      // Get response data
+      let data;
+      try {
+        data = await response.json();
+      } catch (err) {
+        console.error('Failed to parse response:', err);
+        throw new Error('Invalid server response');
+      }
+      
+      console.log('Login response status:', response.status);
+      console.log('Login response data:', data);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Login failed');
+      }
+      
+      // Show success message
+      setSuccess('Login successful! Redirecting to dashboard...');
+      
+      // Use a direct window reload for the govern-bodies page
+      setTimeout(() => {
+        console.log('Navigating to governing body dashboard...');
+        // Use window.location.assign for a complete page load/refresh
+        window.location.assign('/govern-bodies');
+      }, 2000);
+    } catch (err) {
+      console.error('Login error:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred during login');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
     <div className="bg-white rounded-lg shadow-md p-6 w-full max-w-sm">
       <h1 className="text-xl font-semibold mb-4 text-[#1e0fbf] text-center">Governing Body Login</h1>
       
+      {error && (
+        <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-2 rounded-md text-xs mb-4">
+          {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-2 rounded-md text-xs mb-4">
+          {success}
+        </div>
+      )}
+      
       <form onSubmit={handleSubmit}>
         <div className="mb-4">
-          <label htmlFor="email" className="block mb-1 text-sm font-medium text-gray-700">
+          <label htmlFor="govEmail" className="block mb-1 text-sm font-medium text-gray-700">
             Email
           </label>
           <input
-            id="email"
+            id="govEmail"
             type="email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
+            disabled={isLoading}
             required
           />
         </div>
         
         <div className="mb-5">
-          <label htmlFor="password" className="block mb-1 text-sm font-medium text-gray-700">
+          <label htmlFor="govPassword" className="block mb-1 text-sm font-medium text-gray-700">
             Password
           </label>
           <input
-            id="password"
+            id="govPassword"
             type="password"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
             className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
+            disabled={isLoading}
             required
           />
         </div>
         
         <button 
           type="submit" 
-          className="w-full py-2 text-sm font-medium text-white bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] border-none rounded-md cursor-pointer"
+          className="w-full py-2 text-sm font-medium text-white bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] border-none rounded-md cursor-pointer mb-3 disabled:opacity-70"
+          disabled={isLoading}
         >
-          Login
+          {isLoading ? 'Logging in...' : 'Login'}
         </button>
       </form>
     </div>
