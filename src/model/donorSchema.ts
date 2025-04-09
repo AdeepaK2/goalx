@@ -132,7 +132,5 @@ donorSchema.pre('save', async function(next) {
   }
 });
 
-// Fix: Use the safe model registration function
-const Donor = getModel<IDonor>('Donor', donorSchema);
-
-export default Donor;
+// Direct model registration pattern
+export default mongoose.models.Donor || mongoose.model<IDonor>('Donor', donorSchema);
