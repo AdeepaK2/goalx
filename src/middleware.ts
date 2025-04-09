@@ -14,6 +14,9 @@ export async function middleware(request: NextRequest) {
   // Check if the request is for a school page (excluding login)
   const isSchoolRoute = pathname.startsWith('/school') || pathname.startsWith('/schools');
   
+  // Check if the request is for a donor page
+  const isDonorRoute = pathname.startsWith('/donor') || pathname.startsWith('/donors');
+  
   const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'fallback_secret_change_this_in_production'
   );
@@ -82,6 +85,44 @@ export async function middleware(request: NextRequest) {
     }
   }
   
+  // Handle donor routes
+  if (isDonorRoute) {
+    console.log('Checking donor route protection');
+    const donorToken = request.cookies.get('donor_token')?.value;
+    console.log('Donor token present:', !!donorToken);
+    
+    if (!donorToken) {
+      console.log('No donor token, redirecting to login');
+      const url = new URL('/login', request.url);
+      return NextResponse.redirect(url);
+    }
+    
+    try {
+      // Verify token
+      const { payload } = await jwtVerify(donorToken, JWT_SECRET);
+      console.log('Donor token verified successfully, role:', payload.role);
+      
+      // Check if token has donor role
+      if (payload.role !== 'donor') {
+        console.log('Invalid role in token:', payload.role);
+        const url = new URL('/login', request.url);
+        return NextResponse.redirect(url);
+      }
+      
+      console.log('Donor token validation successful, proceeding to donor route');
+    } catch (error) {
+      console.error('Donor token verification failed:', error);
+      // Token verification failed, redirect to login
+      const url = new URL('/login', request.url);
+      const response = NextResponse.redirect(url);
+      
+      // Clear the invalid token
+      response.cookies.delete('donor_token');
+      
+      return response;
+    }
+  }
+  
   // If already logged in as admin and trying to access login page, redirect to dashboard
   if (pathname === '/admin/login') {
     const adminToken = request.cookies.get('adminToken')?.value;
@@ -120,18 +161,39 @@ export async function middleware(request: NextRequest) {
         return NextResponse.next();
       }
     }
+    
+    // If already logged in as donor and trying to access login page, redirect to donor dashboard
+    const donorToken = request.cookies.get('donor_token')?.value;
+    
+    if (donorToken) {
+      try {
+        // Verify token
+        const { payload } = await jwtVerify(donorToken, JWT_SECRET);
+        
+        // Check if token has donor role and redirect to appropriate dashboard
+        if (payload.role === 'donor') {
+          const url = new URL('/donors', request.url);
+          return NextResponse.redirect(url);
+        }
+      } catch (error) {
+        // Token verification failed, allow access to login page
+        return NextResponse.next();
+      }
+    }
   }
   
   return NextResponse.next();
 }
 
-// Update matcher to include school routes
+// Update matcher to include donor routes
 export const config = {
   matcher: [
     '/admin/:path*',
     '/api/admin/:path*',
     '/school/:path*',
     '/schools/:path*',
+    '/donor/:path*',
+    '/donors/:path*',
     '/login'
   ],
 };
