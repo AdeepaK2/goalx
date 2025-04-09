@@ -13,7 +13,7 @@ export default function AboutPage() {
       <main className="bg-white">
         {/* Hero Section */}
         <section className="w-full bg-gradient-to-b from-white to-gray-50 py-16 md:py-24">
-          <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="max-w-7xl mx-auto px-2 md:px-4">
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2">
                 <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">About GoalX</h1>
@@ -41,7 +41,7 @@ export default function AboutPage() {
 
         {/* Our Story Section */}
         <section className="w-full py-16 md:py-24">
-          <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="max-w-7xl mx-auto px-2 md:px-4">
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2 relative order-2 md:order-1">
                 <div className="rounded-2xl overflow-hidden shadow-xl h-[400px] relative">
@@ -96,7 +96,7 @@ export default function AboutPage() {
 
         {/* Our Mission Section */}
         <section className="w-full py-16 md:py-24 bg-gradient-to-b from-gray-50 to-white">
-          <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="max-w-7xl mx-auto px-2 md:px-4">
             <div className="flex flex-col md:flex-row items-center gap-12">
               <div className="w-full md:w-1/2">
                 <h2 className="text-3xl md:text-4xl font-bold text-[#6e11b0] mb-6">Our Mission</h2>
@@ -189,7 +189,7 @@ export default function AboutPage() {
 
         {/* Team Section */}
         <section className="w-full py-16 md:py-24 bg-gradient-to-b from-white to-gray-50">
-          <div className="max-w-7xl mx-auto px-4 md:px-8">
+          <div className="max-w-7xl mx-auto px-2 md:px-4">
             <div className="text-center max-w-3xl mx-auto mb-12">
               <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Meet Our Team</h2>
               <p className="text-lg text-gray-600">
@@ -222,7 +222,7 @@ export default function AboutPage() {
 
         {/* CTA Section */}
         <section className="w-full py-16 md:py-24 bg-gradient-to-br from-[#1e0fbf] to-[#6e11b0]">
-          <div className="max-w-7xl mx-auto px-4 md:px-8 text-center">
+          <div className="max-w-7xl mx-auto px-2 md:px-4 text-center">
             <h2 className="text-3xl md:text-4xl font-bold text-white mb-6">Join Our Mission</h2>
             <p className="text-xl text-white/90 max-w-3xl mx-auto mb-8">
               Whether you're a school in need of equipment, a donor with resources to share, or a regulator who wants to help, there's a place for you in our community.
