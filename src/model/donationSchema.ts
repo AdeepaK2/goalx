@@ -316,4 +316,4 @@ donationSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.model<IDonation>('Donation', donationSchema);
+export default mongoose.models.Donation || mongoose.model<IDonation>('Donation', donationSchema);

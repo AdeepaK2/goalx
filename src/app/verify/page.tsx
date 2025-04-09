@@ -1,9 +1,32 @@
 'use client';
 
-import { useState } from 'react';
+import { Suspense, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+// Loading component to show while the verification form is loading
+function VerificationLoading() {
+  return (
+    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+      <div className="sm:mx-auto sm:w-full sm:max-w-md">
+        <h2 className="text-center text-3xl font-extrabold text-gray-900">
+          Loading verification...
+        </h2>
+      </div>
+    </div>
+  );
+}
+
+// Main page component
 export default function VerifyPage() {
+  return (
+    <Suspense fallback={<VerificationLoading />}>
+      <VerificationForm />
+    </Suspense>
+  );
+}
+
+// Client component that uses useSearchParams
+function VerificationForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   

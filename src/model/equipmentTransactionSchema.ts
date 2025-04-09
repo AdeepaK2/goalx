@@ -208,4 +208,4 @@ equipmentTransactionSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.model<IEquipmentTransaction>('EquipmentTransaction', equipmentTransactionSchema);
+export default mongoose.models.EquipmentTransaction || mongoose.model<IEquipmentTransaction>('EquipmentTransaction', equipmentTransactionSchema);

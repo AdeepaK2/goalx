@@ -1,7 +1,28 @@
 'use client';
 
-import React, { useEffect, useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { Suspense } from 'react';
+
+// Loading component to show while the dashboard is loading
+function DashboardLoading() {
+  return (
+    <div className="flex justify-center items-center min-h-screen">
+      <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-[#1e0fbf]"></div>
+    </div>
+  );
+}
+
+// Main page component
+export default function AdminDashboardPage() {
+  return (
+    <Suspense fallback={<DashboardLoading />}>
+      <AdminDashboard />
+    </Suspense>
+  );
+}
+
+// Client component that uses useSearchParams
+import { useEffect, useState } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { toast, ToastContainer } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 
@@ -20,6 +41,7 @@ interface AdminInfo {
 
 const AdminDashboard: React.FC = () => {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [adminInfo, setAdminInfo] = useState<AdminInfo | null>(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -43,6 +65,12 @@ const AdminDashboard: React.FC = () => {
         setAdminInfo(data.admin);
         console.log('Admin authenticated:', data.admin.name);
         
+        // Check for tab parameter in URL
+        const tabParam = searchParams.get('tab');
+        if (tabParam) {
+          setActiveTab(tabParam);
+        }
+        
         // Show welcome toast
         toast.success(`Welcome back, ${data.admin.name}!`, {
           position: "top-right",
@@ -60,7 +88,7 @@ const AdminDashboard: React.FC = () => {
     .finally(() => {
       setLoading(false);
     });
-  }, [router]);
+  }, [router, searchParams]);
 
   const handleLogout = async () => {
     try {
@@ -114,5 +142,3 @@ const AdminDashboard: React.FC = () => {
     </div>
   );
 };
-
-export default AdminDashboard;

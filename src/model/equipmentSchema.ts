@@ -73,5 +73,5 @@ equipmentSchema.pre('save', async function(next) {
 });
 
 
-export default mongoose.model<IEquipment>('Equipment', equipmentSchema);
+export default mongoose.models.Equipment || mongoose.model<IEquipment>('Equipment', equipmentSchema);
 
