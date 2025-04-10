@@ -139,11 +139,7 @@ export const sendSchoolVerificationEmail = async (
   const verificationUrl = `${baseUrl}/verify?type=school&email=${encodeURIComponent(email)}`;
   
   const htmlContent = `
-    <html>
-<head>  <!-- Added head tag -->
-    
-</head> <!-- Added closing head tag -->
-<body>
+<div>
     <style>
         /* Basic styles for better email client compatibility */
         body {
@@ -212,8 +208,7 @@ export const sendSchoolVerificationEmail = async (
 
         <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
-</body>
-</html>
+</div>
   `;
 
   await sendEmail(email, 'Verify your GoalX school account', htmlContent);
