@@ -171,9 +171,10 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                       }}
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                    <button onClick={() => setActiveTab("profile")}><div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 cursor-pointer">
                       {schoolData?.name ? getInitials(schoolData.name) : <FiUser className="h-6 w-6" />}
-                    </div>
+                    </div></button>
+                    
                   )}
                   <span className="ml-2 text-gray-700 font-medium">
                     {schoolData?.name || "School"}
@@ -183,17 +184,6 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
             </div>
 
             <div className="flex items-center ml-4">
-<<<<<<< HEAD
-              <div className="relative">
-                <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onClick={() => setActiveTab("profile")}>
-                  <span className="sr-only">Open user menu</span>
-                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                    <FiUser />
-                  </div>
-                </button>
-              </div>
-=======
->>>>>>> 7767e33846e8dacf2a0646fba16d1dec22a4ba43
               <div className="ml-4">
                 <button 
                   onClick={handleLogout}
@@ -262,6 +252,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             ) : (
               <div className="flex items-center px-4">
+                <button onClick={() => setActiveTab("profile")} className="flex items-center">
                 <div className="flex-shrink-0">
                   {schoolData?.profilePicture ? (
                     <Image
@@ -282,6 +273,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                     </div>
                   )}
                 </div>
+                </button>
                 <div className="ml-3">
                   <div className="text-base font-medium text-gray-800">
                     {schoolData?.name || "School"}
@@ -293,20 +285,12 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             )}
             <div className="mt-3 space-y-1">
-<<<<<<< HEAD
-              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100" onClick={() => setActiveTab("profile")}>
-                Profile
-              </button>
-              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
-                Logout
-=======
               <button 
                 onClick={handleLogout} 
                 disabled={isLoggingOut}
                 className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {isLoggingOut ? "Logging out..." : "Logout"}
->>>>>>> 7767e33846e8dacf2a0646fba16d1dec22a4ba43
               </button>
             </div>
           </div>

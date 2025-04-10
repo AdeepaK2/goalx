@@ -6,11 +6,8 @@ import Requests from "@/components/schoolContent/requests";
 import Donations from "@/components/schoolContent/donations";
 import Borrowals from "@/components/schoolContent/borrowals";
 import Achievements from "@/components/schoolContent/achivements";
-<<<<<<< HEAD
 import Profile from "@/components/schoolContent/profile";
-=======
 import Inquiries from "@/components/schoolContent/Inquiries";
->>>>>>> 7767e33846e8dacf2a0646fba16d1dec22a4ba43
 import Footer from "@/components/schoolContent/footer";
 
 // Define a type for the action trigger
@@ -56,7 +53,6 @@ const Page = () => {
         )}
         {activeTab === "requests" && <Requests />}
         {activeTab === "borrowals" && <Borrowals />}
-<<<<<<< HEAD
         {activeTab === "profile" && <Profile />}
         {activeTab === "achievements" && (
           <Achievements
@@ -64,11 +60,8 @@ const Page = () => {
             clearActionTrigger={clearActionTrigger} // Pass the clear function
           />
         )}
-=======
-        {activeTab === "achievements" && <Achievements />}
         {activeTab === "donations" && <Donations />}
         {activeTab === "inquiries" && <Inquiries />}
->>>>>>> 7767e33846e8dacf2a0646fba16d1dec22a4ba43
       </main>
 
       <Footer />
