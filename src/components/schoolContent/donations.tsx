@@ -1,38 +1,81 @@
-import React from "react";
-import { FiCheckCircle, FiMinus } from "react-icons/fi";
+import React, { useState, useEffect } from "react";
+import { FiCheckCircle, FiAlertCircle, FiLoader } from "react-icons/fi";
 
-const itemsDonatedData = [
-  {
-    id: 1,
-    name: "Soccer Balls (x5)",
-    donor: "John Doe",
-    donatedDate: "2025-04-01",
-  },
-  {
-    id: 2,
-    name: "Volleyball Net",
-    donor: "John Doe",
-    donatedDate: "2025-04-05",
-  },
-  {
-    id: 3,
-    name: "Badminton Rackets (x10)",
-    donor: "John Doe",
-    donatedDate: "2025-04-08",
-  },
-  {
-    id: 4,
-    name: "Tennis Balls (x30)",
-    donor: "John Doe",
-    donatedDate: "2025-04-10",
-  },
-];
+interface DonationItem {
+  _id: string;
+  donationId: string;
+  donationType: string;
+  status: string;
+  donor: {
+    displayName: string;
+  };
+  itemDetails?: Array<{
+    itemName: string;
+    quantity: number;
+    condition?: string;
+  }>;
+  monetaryDetails?: {
+    amount: number;
+    currency: string;
+  };
+  createdAt: string;
+}
 
 const Donations = () => {
-  // Handler function for the return button click
-  const handleReturnEquipment = (itemId: number) => {
-    console.log(`Return equipment button clicked for item ID: ${itemId}`);
-    // Implement logic to handle the return of the specific equipment item
+  const [donations, setDonations] = useState<DonationItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+
+  useEffect(() => {
+    const fetchDonations = async () => {
+      try {
+        setIsLoading(true);
+        
+        // Get the school ID from the current user session
+        const response = await fetch("/api/auth/school/me");
+        const schoolData = await response.json();
+        
+        if (!schoolData.success || !schoolData.school?.id) {
+          throw new Error("Could not retrieve school information");
+        }
+        
+        // Use the school ID to fetch donations
+        const donationsResponse = await fetch(`/api/donation?recipient=${schoolData.school.id}&status=completed`);
+        const donationsData = await donationsResponse.json();
+        
+        if (donationsData.donations) {
+          setDonations(donationsData.donations);
+        } else {
+          throw new Error("Could not retrieve donations data");
+        }
+      } catch (err) {
+        console.error("Error fetching donations:", err);
+        setError("Failed to load donations. Please try again later.");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchDonations();
+  }, []);
+
+  // Format donation item for display
+  const formatDonationItem = (donation: DonationItem) => {
+    if (donation.donationType === "MONETARY") {
+      return `${donation.monetaryDetails?.amount || 0} ${donation.monetaryDetails?.currency || "LKR"}`;
+    } else if (donation.donationType === "EQUIPMENT" && donation.itemDetails && donation.itemDetails.length > 0) {
+      return donation.itemDetails.map(item => 
+        `${item.itemName} (${item.quantity > 1 ? `x${item.quantity}` : '1'})`
+      ).join(", ");
+    } else {
+      return "Other Donation";
+    }
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return `${date.getMonth() + 1}/${date.getDate()}`;
   };
 
   return (
@@ -41,10 +84,10 @@ const Donations = () => {
       <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
-            Donations Recieved to Our School
+            Donations Received by Our School
           </h1>
           <p className="text-blue-100 text-xl mt-4 text-center max-w-2xl mx-auto">
-            Keep track of the donations recieved to your school. 
+            Keep track of the donations received by your school.
           </p>
         </div>
       </div>
@@ -56,29 +99,44 @@ const Donations = () => {
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-                <FiCheckCircle className="mr-2 text-[#1e0fbf]" /> Donations Recieved
-              </h2>
-              {/* Removed the single button from here */}   
+                <FiCheckCircle className="mr-2 text-[#1e0fbf]" /> Donations Received
+              </h2>   
             </div>
             <div className="p-5">
-              <div className="space-y-4">
-                {itemsDonatedData.map((item) => (
-                  <div
-                    key={item.id}
-                    className="bg-gray-50 p-3 rounded-md flex justify-between items-center space-x-4" // Added space-x-4 for spacing
-                  >
-                    <span className="text-gray-700 flex-1 min-w-0">
-                      {item.name}
-                    </span>
-                    <span className="text-[#6e11b0] text-sm text-right w-28 flex-shrink-0">
-                      Received {item.donatedDate.substring(5)}
-                    </span>
-                    <span className="text-[#1e0fbf] text-sm text-right w-28 flex-shrink-0">
-                      By {item.donor}
-                    </span>
-                  </div>
-                ))}
-              </div>
+              {isLoading ? (
+                <div className="flex justify-center items-center py-12">
+                  <FiLoader className="animate-spin text-3xl text-[#6e11b0]" />
+                  <span className="ml-3 text-gray-600">Loading donations...</span>
+                </div>
+              ) : error ? (
+                <div className="bg-red-50 p-4 rounded-md flex items-center justify-center">
+                  <FiAlertCircle className="text-red-500 mr-2" />
+                  <span className="text-red-700">{error}</span>
+                </div>
+              ) : donations.length === 0 ? (
+                <div className="text-center py-8 text-gray-500">
+                  No donations have been received yet.
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {donations.map((donation) => (
+                    <div
+                      key={donation._id}
+                      className="bg-gray-50 p-3 rounded-md flex justify-between items-center space-x-4"
+                    >
+                      <span className="text-gray-700 flex-1 min-w-0">
+                        {formatDonationItem(donation)}
+                      </span>
+                      <span className="text-[#6e11b0] text-sm text-right w-28 flex-shrink-0">
+                        Received {formatDate(donation.createdAt)}
+                      </span>
+                      <span className="text-[#1e0fbf] text-sm text-right w-28 flex-shrink-0">
+                        By {donation.donor.displayName || "Anonymous"}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>
