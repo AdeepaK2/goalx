@@ -3,8 +3,10 @@ import React, { useState } from "react";
 import NavBar from "@/components/schoolContent/navBar";
 import Dashboard from "@/components/schoolContent/dashboard";
 import Requests from "@/components/schoolContent/requests";
+import Donations from "@/components/schoolContent/donations";
 import Borrowals from "@/components/schoolContent/borrowals";
 import Achievements from "@/components/schoolContent/achivements";
+import Inquiries from "@/components/schoolContent/Inquiries";
 import Footer from "@/components/schoolContent/footer";
 
 const Page = () => {
@@ -21,6 +23,8 @@ const Page = () => {
         {activeTab === "requests" && <Requests />}
         {activeTab === "borrowals" && <Borrowals />}
         {activeTab === "achievements" && <Achievements />}
+        {activeTab === "donations" && <Donations />}
+        {activeTab === "inquiries" && <Inquiries />}
       </main>
 
       <Footer />
