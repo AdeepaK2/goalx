@@ -74,7 +74,7 @@ export default function Footer() {
 
           {/* Copyright */}
           <div className="col-span-1">
-            <p className="text-gray-600">© 2025 SportShare. All rights reserved.</p>
+            <p className="text-gray-600">© 2025 GoalX. All rights reserved.</p>
           </div>
         </div>
       </div>
