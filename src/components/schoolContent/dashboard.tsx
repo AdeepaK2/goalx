@@ -218,7 +218,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
   return (
     <div>
-      {/* Hero Section - Keeping the gradient as it already uses the correct colors */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
@@ -231,9 +231,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 pb-12">
+        {/* Dashboard Stats Grid - Changed to 2 columns */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-12">
           {/* Items Requested Card */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="p-5 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
@@ -387,13 +388,11 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center">
                           <div
-                            className={`flex-shrink-0 h-8 w-8 bg-${
-                              achievement.colorScheme
-                            }-100 text-${
-                              achievement.colorScheme === "purple"
-                                ? "[#6e11b0]"
-                                : "[#1e0fbf]"
-                            } rounded-full flex items-center justify-center`}
+                            className={`flex-shrink-0 h-8 w-8 rounded-full flex items-center justify-center ${
+                              achievement.colorScheme === "purple" 
+                                ? "bg-purple-100 text-[#6e11b0]" 
+                                : "bg-indigo-100 text-[#1e0fbf]"
+                            }`}
                           >
                             <span className="font-medium text-sm">
                               {achievement.event.abbreviation}
@@ -419,12 +418,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <span
-                          className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-${
-                            achievement.colorScheme
-                          }-100 text-${
+                          className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
                             achievement.colorScheme === "purple"
-                              ? "[#6e11b0]"
-                              : "[#1e0fbf]"
+                              ? "bg-purple-100 text-[#6e11b0]"
+                              : "bg-indigo-100 text-[#1e0fbf]"
                           }`}
                         >
                           {achievement.record}
