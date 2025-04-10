@@ -36,6 +36,33 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     },
   ];
 
+  const itemsDonatedData = [
+    {
+      id: 1,
+      name: "Soccer Balls (x5)",
+      donor: "John Doe",
+      donatedDate: "2025-04-01",
+    },
+    {
+      id: 2,
+      name: "Volleyball Net",
+      donor: "John Doe",
+      donatedDate: "2025-04-05",
+    },
+    {
+      id: 3,
+      name: "Badminton Rackets (x10)",
+      donor: "John Doe",
+      donatedDate: "2025-04-08",
+    },
+    {
+      id: 4,
+      name: "Tennis Balls (x30)",
+      donor: "John Doe",
+      donatedDate: "2025-04-10",
+    },
+  ];
+
   // Sample data for borrowed items
   const itemsBorrowedData = [
     {
@@ -145,7 +172,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
 
   return (
     <div>
-      {/* Hero Section - Keeping the gradient as it already uses the correct colors */}
+      {/* Hero Section */}
       <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
@@ -158,9 +185,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         </div>
       </div>
 
-      {/* Dashboard Stats */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      {/* Main Content Area */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 pb-12">
+        {/* Dashboard Stats Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-12">
           {/* Items Requested Card */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="p-5 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
@@ -168,7 +196,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 <FiBox className="mr-2 text-[#6e11b0]" /> Items Requested
               </h2>
               <span className="bg-[#6e11b0] bg-opacity-20 text-white py-1 px-3 rounded-full text-sm font-medium">
-                Pending
+                {itemsRequestedData.length} Items
               </span>
             </div>
             <div className="p-5">
@@ -176,10 +204,15 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 {itemsRequestedData.slice(0, 2).map((item) => (
                   <div
                     key={item.id}
-                    className="bg-gray-50 p-3 rounded-md flex justify-between"
+                    className="bg-gray-50 p-3 rounded-md flex justify-between items-center"
                   >
-                    <span className="text-gray-700">{item.name}</span>
-                    <span className="text-[#6e11b0] text-sm">
+                    <span className="text-gray-700 truncate pr-2">{item.name}</span>
+                    <span className={`text-xs font-medium px-2 py-0.5 rounded ${
+                      item.status === 'Approved' ? 'bg-green-100 text-green-800' :
+                      item.status === 'Denied' ? 'bg-red-100 text-red-800' :
+                      item.status === 'Processing' ? 'bg-yellow-100 text-yellow-800' :
+                      'bg-blue-100 text-blue-800' // Pending Approval or other
+                    }`}>
                       {item.status}
                     </span>
                   </div>
@@ -201,7 +234,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 <FiCheckCircle className="mr-2 text-[#1e0fbf]" /> Items Borrowed
               </h2>
               <span className="bg-[#1e0fbf] bg-opacity-20 text-white py-1 px-3 rounded-full text-sm font-medium">
-                Active
+                {itemsBorrowedData.length} Active
               </span>
             </div>
             <div className="p-5">
@@ -209,10 +242,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 {itemsBorrowedData.slice(0, 2).map((item) => (
                   <div
                     key={item.id}
-                    className="bg-gray-50 p-3 rounded-md flex justify-between"
+                    className="bg-gray-50 p-3 rounded-md flex justify-between items-center"
                   >
-                    <span className="text-gray-700">{item.name}</span>
-                    <span className="text-[#1e0fbf] text-sm">
+                    <span className="text-gray-700 truncate pr-2">{item.name}</span>
+                    <span className="text-[#1e0fbf] text-sm whitespace-nowrap">
                       Due {item.dueDate.substring(5)}
                     </span>
                   </div>
@@ -226,116 +259,166 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               </button>
             </div>
           </div>
-        </div>
-      </div>
 
-      {/* Recent Achievements */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="flex items-center justify-between mb-6">
-          <h2 className="text-2xl font-bold text-gray-800 flex items-center">
-            <FiAward className="mr-2 text-[#6e11b0]" /> Recent Achievements
-          </h2>
-          <button
-            onClick={() => setActiveTab("achievements")}
-            className="text-[#1e0fbf] hover:text-purple-800 font-medium flex items-center"
-          >
-            View all <span className="ml-1">→</span>
-          </button>
-        </div>
-        <div className="bg-white shadow overflow-hidden rounded-lg">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Event
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Student
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Record
-                </th>
-                <th
-                  scope="col"
-                  className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                >
-                  Date
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {achievementsData.slice(0, 3).map((achievement) => (
-                <tr key={achievement.id}>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div
-                        className={`flex-shrink-0 h-8 w-8 bg-${
-                          achievement.colorScheme
-                        }-100 text-[${
-                          achievement.colorScheme === "purple"
-                            ? "#6e11b0"
-                            : "#1e0fbf"
-                        }] rounded-full flex items-center justify-center`}
-                      >
-                        <span className="font-medium text-sm">
-                          {achievement.event.abbreviation}
-                        </span>
-                      </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
-                          {achievement.event.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {achievement.event.category}
-                        </div>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">
-                      {achievement.student.name}
-                    </div>
-                    <div className="text-sm text-gray-500">
-                      {achievement.student.grade}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span
-                      className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full bg-[${
-                        achievement.colorScheme === "purple"
-                          ? "#6e11b0"
-                          : "#1e0fbf"
-                      }] bg-opacity-10 text-white`}
-                    >
-                      {achievement.record}
+          {/* Donations Received Card */}
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="p-5 bg-green-50 border-b border-green-100 flex justify-between items-center">
+              <h2 className="text-lg font-semibold text-gray-800 flex items-center">
+                <FiAward className="mr-2 text-green-600" /> Donations Received
+              </h2>
+               <span className="bg-green-600 bg-opacity-20 text-white py-1 px-3 rounded-full text-sm font-medium">
+                {itemsDonatedData.length} Total
+              </span>
+            </div>
+            <div className="p-5">
+              <div className="space-y-4">
+                {itemsDonatedData.slice(0, 2).map((item) => (
+                  <div
+                    key={item.id}
+                    className="bg-gray-50 p-3 rounded-md flex justify-between items-center space-x-2"
+                  >
+                    <span className="text-gray-700 flex-1 min-w-0 truncate">
+                      {item.name}
                     </span>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {achievement.date}
-                  </td>
+                     <span className="text-gray-500 text-sm text-right whitespace-nowrap flex-shrink-0">
+                      By {item.donor}
+                    </span>
+                  </div>
+                ))}
+              </div>
+              <button
+                onClick={() => setActiveTab("donations")}
+                className="mt-6 w-full flex items-center justify-center px-4 py-2 border border-green-600 text-sm font-medium rounded-md text-green-600 bg-green-50 hover:bg-green-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+              >
+                View all Donations
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Recent Achievements */}
+        <div>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center">
+              <FiAward className="mr-2 text-[#6e11b0]" /> Recent Achievements
+            </h2>
+            <button
+              onClick={() => setActiveTab("achievements")}
+              className="text-[#1e0fbf] hover:text-purple-800 font-medium flex items-center"
+            >
+              View all <span className="ml-1">→</span>
+            </button>
+          </div>
+          <div className="bg-white shadow overflow-hidden rounded-lg">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Event
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Student
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Record
+                  </th>
+                  <th
+                    scope="col"
+                    className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
+                  >
+                    Date
+                  </th>
                 </tr>
-              ))}
-              <tr>
-                <td colSpan={4} className="">
-                  <div className="flex justify-center py-6">
-                    <button className="group w-full px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center">
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {achievementsData.slice(0, 3).map((achievement) => (
+                  <tr key={achievement.id}>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div
+                          className={`flex-shrink-0 h-8 w-8 ${
+                            achievement.colorScheme === "purple"
+                              ? "bg-purple-100 text-[#6e11b0]"
+                              : "bg-indigo-100 text-[#1e0fbf]"
+                          } rounded-full flex items-center justify-center`}
+                        >
+                          <span className="font-medium text-sm">
+                            {achievement.event.abbreviation}
+                          </span>
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">
+                            {achievement.event.name}
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {achievement.event.category}
+                          </div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="text-sm font-medium text-gray-900">
+                        {achievement.student.name}
+                      </div>
+                      <div className="text-sm text-gray-500">
+                        {achievement.student.grade}
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span
+                        className={`px-3 py-1 inline-flex text-sm leading-5 font-semibold rounded-full ${
+                          achievement.colorScheme === "purple"
+                            ? "bg-purple-100 text-[#6e11b0]"
+                            : "bg-indigo-100 text-[#1e0fbf]"
+                        }`}
+                      >
+                        {achievement.record}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {achievement.date}
+                    </td>
+                  </tr>
+                ))}
+                 {/* Conditional Rendering for Report Achievement Button Row */}
+                {achievementsData.length > 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-6 py-4">
+                      <div className="flex justify-center">
+                        <button className="group w-full max-w-xs px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center">
+                          <FiPlus className="mr-2 transition-transform group-hover:rotate-90" />
+                          <span>Report Achievement</span>
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                )}
+              </tbody>
+            </table>
+             {/* Message when no achievements */}
+            {achievementsData.length === 0 && (
+              <div className="text-center py-10 px-6">
+                <FiAward className="mx-auto h-12 w-12 text-gray-400" />
+                <h3 className="mt-2 text-sm font-medium text-gray-900">No achievements yet</h3>
+                <p className="mt-1 text-sm text-gray-500">Get started by reporting the first achievement.</p>
+                <div className="mt-6">
+                   <button className="group max-w-xs px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center mx-auto">
                       <FiPlus className="mr-2 transition-transform group-hover:rotate-90" />
                       <span>Report Achievement</span>
                     </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+                </div>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </div>

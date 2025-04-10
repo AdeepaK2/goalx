@@ -15,6 +15,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
     { id: "dashboard", label: "Dashboard" },
     { id: "requests", label: "Requests" },
     { id: "borrowals", label: "Borrowals" },
+    { id: "donations", label: "Donations" },
     { id: "achievements", label: "Achievements" },
   ];
 
