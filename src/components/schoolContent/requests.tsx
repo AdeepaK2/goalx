@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiBox, FiPlus, FiX, FiLoader } from "react-icons/fi";
+import { FiBox, FiPlus, FiX, FiLoader, FiTrash2 } from "react-icons/fi";
 
 interface EquipmentRequest {
   _id: string;
@@ -7,6 +7,9 @@ interface EquipmentRequest {
   eventName: string;
   status: string;
   requestDate: string;
+  eventStartDate?: string;
+  eventEndDate?: string;
+  eventDescription: string;
   items: Array<{
     equipment: {
       _id: string;
@@ -23,17 +26,50 @@ interface SchoolInfo {
   email?: string;
 }
 
+interface Equipment {
+  _id: string;
+  name: string;
+  equipmentId: string;
+  description?: string;
+  quantity?: number;
+  sport?: {
+    _id: string;
+    sportName: string;
+  };
+}
+
+interface Sport {
+  _id: string;
+  sportId: string;
+  sportName: string;
+  description: string;
+  categories: string[];
+}
+
 const Requests = () => {
-  // State for modal visibility and form data
   const [showModal, setShowModal] = useState(false);
   const [requestForm, setRequestForm] = useState({
-    name: "",
-    quantity: "",
-    reason: "",
-    specialization: "",
+    eventName: "",
+    eventDescription: "",
+    eventStartDate: "",
+    eventEndDate: "",
   });
+
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [selectedSport, setSelectedSport] = useState<string>("");
+  const [fetchingSports, setFetchingSports] = useState(false);
+  const [sportError, setSportError] = useState<string | null>(null);
+
+  const [requestItems, setRequestItems] = useState<{
+    equipmentId: string;
+    equipmentName: string;
+    quantity: number;
+  }[]>([]);
   
-  // Add state for equipment requests data
+  const [availableEquipment, setAvailableEquipment] = useState<Equipment[]>([]);
+  const [filteredEquipment, setFilteredEquipment] = useState<Equipment[]>([]);
+  const [fetchingEquipment, setFetchingEquipment] = useState(false);
+  
   const [equipmentRequests, setEquipmentRequests] = useState<EquipmentRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -42,13 +78,11 @@ const Requests = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
-  // Fetch equipment requests on component mount
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         
-        // First, get current school info
         const schoolResponse = await fetch('/api/auth/school/me');
         if (!schoolResponse.ok) {
           throw new Error('Failed to fetch school information');
@@ -62,7 +96,6 @@ const Requests = () => {
           throw new Error('No school ID found');
         }
         
-        // Then, fetch equipment requests for this school
         const requestsResponse = await fetch(`/api/equipment/request?school=${schoolId}`);
         if (!requestsResponse.ok) {
           throw new Error('Failed to fetch equipment requests');
@@ -70,17 +103,21 @@ const Requests = () => {
         
         const requestsData = await requestsResponse.json();
         
-        // Format the request data
         const formattedRequests = requestsData.equipmentRequests?.map((request: any) => ({
           _id: request._id,
           requestId: request.requestId,
           eventName: request.eventName,
           status: request.status,
           requestDate: new Date(request.createdAt).toISOString().split('T')[0],
+          eventStartDate: request.eventStartDate ? new Date(request.eventStartDate).toISOString().split('T')[0] : undefined,
+          eventEndDate: request.eventEndDate ? new Date(request.eventEndDate).toISOString().split('T')[0] : undefined,
+          eventDescription: request.eventDescription,
           items: request.items || []
         })) || [];
         
         setEquipmentRequests(formattedRequests);
+        
+        fetchSports();
       } catch (err: any) {
         console.error('Error fetching equipment requests:', err);
         setError(err.message || 'An error occurred while fetching data');
@@ -91,15 +128,85 @@ const Requests = () => {
     
     fetchData();
   }, []);
+  
+  const fetchSports = async () => {
+    try {
+      setFetchingSports(true);
+      setSportError(null);
+      
+      const response = await fetch('/api/sport');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch sports');
+      }
+      
+      const data = await response.json();
+      
+      if (data.sports && Array.isArray(data.sports) && data.sports.length > 0) {
+        setSports(data.sports);
+        
+        await fetchAvailableEquipment();
+      } else {
+        setSportError('No sports found');
+      }
+    } catch (err: any) {
+      console.error('Error fetching sports:', err);
+      setSportError(err.message || 'An error occurred while fetching sports');
+    } finally {
+      setFetchingSports(false);
+    }
+  };
+  
+  const fetchAvailableEquipment = async () => {
+    try {
+      setFetchingEquipment(true);
+      
+      const response = await fetch('/api/equipment?limit=100');
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch equipment');
+      }
+      
+      const data = await response.json();
+      
+      if (data.equipment && Array.isArray(data.equipment) && data.equipment.length > 0) {
+        setAvailableEquipment(data.equipment);
+        setFilteredEquipment(data.equipment);
+      } else {
+        console.warn('No equipment found in database');
+        setAvailableEquipment([]);
+        setFilteredEquipment([]);
+      }
+      
+    } catch (err) {
+      console.error('Error fetching available equipment:', err);
+      setAvailableEquipment([]);
+      setFilteredEquipment([]);
+    } finally {
+      setFetchingEquipment(false);
+    }
+  };
+  
+  useEffect(() => {
+    if (selectedSport) {
+      const filtered = availableEquipment.filter(
+        equipment => equipment.sport?._id === selectedSport
+      );
+      setFilteredEquipment(filtered);
+    } else {
+      setFilteredEquipment(availableEquipment);
+    }
+  }, [selectedSport, availableEquipment]);
 
-  // Handler function for the button click
   const handleMakeRequest = () => {
     setShowModal(true);
+    if (sports.length === 0) {
+      fetchSports();
+    }
   };
 
-  // Handle form input changes
   const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>,
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>,
   ) => {
     const { name, value } = e.target;
     setRequestForm({
@@ -107,8 +214,48 @@ const Requests = () => {
       [name]: value,
     });
   };
+  
+  const handleSportChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setSelectedSport(e.target.value);
+  };
+  
+  const handleAddEquipmentItem = () => {
+    setRequestItems([
+      ...requestItems,
+      {
+        equipmentId: "",
+        equipmentName: "",
+        quantity: 1
+      }
+    ]);
+  };
+  
+  const handleItemChange = (index: number, field: string, value: string | number) => {
+    const newItems = [...requestItems];
+    
+    if (field === 'equipmentId' && typeof value === 'string') {
+      const selectedEquipment = filteredEquipment.find(eq => eq._id === value);
+      newItems[index] = {
+        ...newItems[index],
+        equipmentId: value,
+        equipmentName: selectedEquipment?.name || ""
+      };
+    } else {
+      newItems[index] = {
+        ...newItems[index],
+        [field]: value
+      };
+    }
+    
+    setRequestItems(newItems);
+  };
+  
+  const handleRemoveItem = (index: number) => {
+    const newItems = [...requestItems];
+    newItems.splice(index, 1);
+    setRequestItems(newItems);
+  };
 
-  // Handle form submission
   const handleSubmitRequest = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitLoading(true);
@@ -119,22 +266,30 @@ const Requests = () => {
         throw new Error('School information not available');
       }
       
-      // Format the request data for the API
+      if (requestItems.length === 0) {
+        throw new Error('At least one equipment item is required');
+      }
+      
+      const invalidItems = requestItems.filter(item => 
+        !item.equipmentId || item.quantity < 1
+      );
+      
+      if (invalidItems.length > 0) {
+        throw new Error('All equipment items must have a selection and a valid quantity');
+      }
+      
       const requestData = {
         school: schoolInfo.id,
-        eventName: `Equipment Request: ${requestForm.name}`,
-        eventDescription: requestForm.reason,
-        items: [
-          {
-            // Note: In a real implementation, you would want to select from available equipment
-            // This is a simplification - would need to be connected to actual equipment IDs
-            equipment: requestForm.specialization, // Using specialization field as an equipment ID temporarily
-            quantityRequested: parseInt(requestForm.quantity)
-          }
-        ]
+        eventName: requestForm.eventName,
+        eventDescription: requestForm.eventDescription,
+        eventStartDate: requestForm.eventStartDate || undefined,
+        eventEndDate: requestForm.eventEndDate || undefined,
+        items: requestItems.map(item => ({
+          equipment: item.equipmentId,
+          quantityRequested: item.quantity
+        }))
       };
       
-      // Submit the request to the API
       const response = await fetch('/api/equipment/request', {
         method: 'POST',
         headers: {
@@ -148,28 +303,33 @@ const Requests = () => {
         throw new Error(errorData.error || 'Failed to submit request');
       }
       
-      // On success, add the new request to the state
       const newRequest = await response.json();
       
-      // Format the new request to match our state structure
       const formattedNewRequest = {
         _id: newRequest._id,
         requestId: newRequest.requestId,
         eventName: newRequest.eventName,
         status: newRequest.status,
         requestDate: new Date(newRequest.createdAt).toISOString().split('T')[0],
+        eventStartDate: newRequest.eventStartDate ? new Date(newRequest.eventStartDate).toISOString().split('T')[0] : undefined,
+        eventEndDate: newRequest.eventEndDate ? new Date(newRequest.eventEndDate).toISOString().split('T')[0] : undefined,
+        eventDescription: newRequest.eventDescription,
         items: newRequest.items || []
       };
       
-      // Update the state with the new request
       setEquipmentRequests(prev => [formattedNewRequest, ...prev]);
       
-      // Show success message and reset form
       setSubmitSuccess(true);
       setTimeout(() => setSubmitSuccess(false), 3000);
       
-      // Reset form and close modal
-      setRequestForm({ name: "", quantity: "", reason: "", specialization: "" });
+      setRequestForm({ 
+        eventName: "", 
+        eventDescription: "", 
+        eventStartDate: "", 
+        eventEndDate: "" 
+      });
+      setRequestItems([]);
+      setSelectedSport("");
       setShowModal(false);
     } catch (error: any) {
       console.error('Error submitting request:', error);
@@ -181,11 +341,17 @@ const Requests = () => {
 
   const handleCloseModal = () => {
     setShowModal(false);
-    setRequestForm({ name: "", quantity: "", reason: "", specialization: "" });
+    setRequestForm({ 
+      eventName: "", 
+      eventDescription: "", 
+      eventStartDate: "", 
+      eventEndDate: "" 
+    });
+    setRequestItems([]);
+    setSelectedSport("");
     setSubmitError(null);
   };
 
-  // Helper function to get status color
   const getStatusColor = (status: string) => {
     switch(status.toLowerCase()) {
       case 'approved':
@@ -203,9 +369,17 @@ const Requests = () => {
     }
   };
 
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return new Date(dateString).toLocaleDateString('en-US', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric'
+    });
+  };
+
   return (
     <div>
-      {/* Hero Section - Keeping the gradient as it already uses the correct colors */}
       <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
@@ -218,10 +392,8 @@ const Requests = () => {
         </div>
       </div>
 
-      {/* Dashboard Stats */}
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
         <div className="grid grid-cols-1 gap-6">
-          {/* Items Requested Card */}
           <div className="bg-white shadow rounded-lg overflow-hidden">
             <div className="p-5 bg-purple-50 border-b border-purple-100 flex justify-between items-center">
               <h2 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -269,7 +441,13 @@ const Requests = () => {
                               `${item.equipment?.name || 'Equipment'} (${item.quantityRequested})`
                             ).join(', ')}
                           </p>
-                          <p>Requested on: {request.requestDate}</p>
+                          {request.eventStartDate && (
+                            <p className="mb-1">
+                              Event Date: {formatDate(request.eventStartDate)} 
+                              {request.eventEndDate && ` to ${formatDate(request.eventEndDate)}`}
+                            </p>
+                          )}
+                          <p>Requested on: {formatDate(request.requestDate)}</p>
                         </div>
                       </div>
                     ))
@@ -287,11 +465,9 @@ const Requests = () => {
         </div>
       </div>
 
-      {/* Request Modal */}
       {showModal && (
-        <div className="fixed inset-0 backdrop-blur bg-opacity-50 overflow-y-auto h-full w-full z-50 flex items-center justify-center">
-          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 md:mx-0">
-            {/* Modal Header */}
+        <div className="fixed inset-0 backdrop-blur bg-opacity-50 bg-black overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-3xl w-full mx-4 md:mx-auto my-8">
             <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
               <h3 className="text-lg font-medium text-gray-900">
                 Request Equipment
@@ -304,79 +480,188 @@ const Requests = () => {
               </button>
             </div>
 
-            {/* Modal Body */}
             <form onSubmit={handleSubmitRequest} className="px-6 py-4">
-              <div className="space-y-4">
+              <div className="space-y-6">
                 <div>
                   <label
-                    htmlFor="name"
+                    htmlFor="eventName"
                     className="block text-sm font-medium text-[#1e0fbf]"
                   >
-                    Equipment Name
+                    Event Name
                   </label>
                   <input
                     type="text"
-                    id="name"
-                    name="name"
-                    value={requestForm.name}
+                    id="eventName"
+                    name="eventName"
+                    placeholder="e.g. Annual Sports Meet"
+                    value={requestForm.eventName}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-[#6e11b0] focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     required
                   />
+                </div>
+                
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label
+                      htmlFor="eventStartDate"
+                      className="block text-sm font-medium text-[#1e0fbf]"
+                    >
+                      Event Start Date
+                    </label>
+                    <input
+                      type="date"
+                      id="eventStartDate"
+                      name="eventStartDate"
+                      value={requestForm.eventStartDate}
+                      onChange={handleInputChange}
+                      min={new Date().toISOString().split('T')[0]}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                      required
+                    />
+                  </div>
+                  
+                  <div>
+                    <label
+                      htmlFor="eventEndDate"
+                      className="block text-sm font-medium text-[#1e0fbf]"
+                    >
+                      Event End Date
+                    </label>
+                    <input
+                      type="date"
+                      id="eventEndDate"
+                      name="eventEndDate"
+                      value={requestForm.eventEndDate}
+                      onChange={handleInputChange}
+                      min={requestForm.eventStartDate || new Date().toISOString().split('T')[0]}
+                      className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    />
+                  </div>
                 </div>
 
                 <div>
                   <label
-                    htmlFor="specialization"
+                    htmlFor="eventDescription"
                     className="block text-sm font-medium text-[#1e0fbf]"
                   >
-                    Equipment Specialization
-                  </label>
-                  <input
-                    type="text"
-                    id="specialization"
-                    name="specialization"
-                    value={requestForm.specialization}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 text-[#6e11b0] rounded-md shadow-sm py-2 px-3 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="quantity"
-                    className="block text-sm font-medium text-[#1e0fbf]"
-                  >
-                    Quantity
-                  </label>
-                  <input
-                    type="number"
-                    id="quantity"
-                    name="quantity"
-                    value={requestForm.quantity}
-                    onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-[#6e11b0] focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-                    required
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="reason"
-                    className="block text-sm font-medium text-[#1e0fbf]"
-                  >
-                    Reason for Request
+                    Event Description
                   </label>
                   <textarea
-                    id="reason"
-                    name="reason"
+                    id="eventDescription"
+                    name="eventDescription"
                     rows={3}
-                    value={requestForm.reason}
+                    placeholder="Describe the event and why you need this equipment"
+                    value={requestForm.eventDescription}
                     onChange={handleInputChange}
-                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-[#6e11b0] focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     required
                   />
+                </div>
+                
+                <div>
+                  <label
+                    htmlFor="sport"
+                    className="block text-sm font-medium text-[#1e0fbf]"
+                  >
+                    Select Sport
+                  </label>
+                  <select
+                    id="sport"
+                    value={selectedSport}
+                    onChange={handleSportChange}
+                    className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-800 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                  >
+                    <option value="">All Sports</option>
+                    {fetchingSports ? (
+                      <option disabled>Loading sports...</option>
+                    ) : (
+                      sports.map((sport) => (
+                        <option key={sport._id} value={sport._id}>
+                          {sport.sportName}
+                        </option>
+                      ))
+                    )}
+                  </select>
+                  {sportError && (
+                    <p className="mt-1 text-sm text-red-600">{sportError}</p>
+                  )}
+                </div>
+                
+                <div>
+                  <div className="flex justify-between items-center mb-3">
+                    <label className="block text-sm font-medium text-[#1e0fbf]">
+                      Equipment Items
+                    </label>
+                    <button
+                      type="button"
+                      onClick={handleAddEquipmentItem}
+                      className="inline-flex items-center text-sm text-[#1e0fbf] hover:text-[#6e11b0]"
+                    >
+                      <FiPlus className="mr-1" /> Add Item
+                    </button>
+                  </div>
+                  
+                  {requestItems.length === 0 ? (
+                    <div className="bg-gray-50 p-4 rounded-md text-center text-gray-500">
+                      No equipment items added yet. Click "Add Item" to add equipment to your request.
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {requestItems.map((item, index) => (
+                        <div key={index} className="flex items-start space-x-2 bg-gray-50 p-3 rounded-md">
+                          <div className="flex-grow">
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+                              <div className="col-span-2">
+                                <label className="block text-xs text-gray-500">
+                                  Equipment
+                                </label>
+                                <select
+                                  value={item.equipmentId}
+                                  onChange={(e) => handleItemChange(index, 'equipmentId', e.target.value)}
+                                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-gray-800 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                  required
+                                >
+                                  <option value="">Select Equipment</option>
+                                  {fetchingEquipment ? (
+                                    <option disabled>Loading equipment...</option>
+                                  ) : filteredEquipment.length === 0 ? (
+                                    <option disabled>No equipment available</option>
+                                  ) : (
+                                    filteredEquipment.map(eq => (
+                                      <option key={eq._id} value={eq._id}>
+                                        {eq.name} {eq.sport?.sportName ? `(${eq.sport.sportName})` : ''}
+                                      </option>
+                                    ))
+                                  )}
+                                </select>
+                              </div>
+                              <div>
+                                <label className="block text-xs text-gray-500">
+                                  Quantity
+                                </label>
+                                <input
+                                  type="number"
+                                  min="1"
+                                  value={item.quantity}
+                                  onChange={(e) => handleItemChange(index, 'quantity', parseInt(e.target.value))}
+                                  className="mt-1 block w-full border border-gray-300 rounded-md shadow-sm py-1 px-2 text-gray-800 text-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                                  required
+                                />
+                              </div>
+                            </div>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveItem(index)}
+                            className="mt-6 text-red-500 hover:text-red-700"
+                          >
+                            <FiTrash2 />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 
                 {submitError && (
@@ -386,7 +671,6 @@ const Requests = () => {
                 )}
               </div>
 
-              {/* Modal Footer */}
               <div className="mt-6 flex justify-end space-x-3">
                 <button
                   type="button"
@@ -398,8 +682,8 @@ const Requests = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={submitLoading}
-                  className="px-4 py-2 bg-[#1e0fbf] text-white text-sm font-medium rounded-md hover:bg-[#6e11b0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] transition duration-150 ease-in-out flex items-center"
+                  disabled={submitLoading || requestItems.length === 0}
+                  className="px-4 py-2 bg-[#1e0fbf] text-white text-sm font-medium rounded-md hover:bg-[#6e11b0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] transition duration-150 ease-in-out flex items-center disabled:bg-opacity-70 disabled:cursor-not-allowed"
                 >
                   {submitLoading && <FiLoader className="animate-spin mr-2" size={16} />}
                   Submit Request

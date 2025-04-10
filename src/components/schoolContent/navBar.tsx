@@ -16,6 +16,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
     { id: "requests", label: "Requests" },
     { id: "borrowals", label: "Borrowals" },
     { id: "donations", label: "Donations" },
+    { id: "inquiries", label: "Inquiries" },
     { id: "achievements", label: "Achievements" },
   ];
 
@@ -110,30 +111,22 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
       {mobileMenuOpen && (
         <div className="md:hidden">
           <div className="pt-2 pb-3 space-y-1">
-            <Link
-              href="/schools"
-              className="text-blue-600 bg-blue-50 block pl-3 pr-4 py-2 border-l-4 border-blue-500 text-base font-medium"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/schools/equipment"
-              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            >
-              Equipment
-            </Link>
-            <Link
-              href="/schools/achievements"
-              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            >
-              Achievements
-            </Link>
-            <Link
-              href="/schools/calendar"
-              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            >
-              Calendar
-            </Link>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left ${
+                  activeTab === tab.id
+                    ? "text-blue-600 bg-blue-50 block pl-3 pr-4 py-2 border-l-4 border-blue-500 text-base font-medium"
+                    : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
             <div className="flex items-center px-4">
