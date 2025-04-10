@@ -5,10 +5,10 @@ import mongoose from 'mongoose';
 
 // GET endpoint - fetch equipment
 export async function GET(request: NextRequest) {
-  const error = await ensureConnection();
-  if (error) return error;
-
   try {
+    const error = await ensureConnection();
+    if (error) return error;
+
     const { searchParams } = new URL(request.url);
     const id = searchParams.get('id');
     const name = searchParams.get('name');
@@ -40,19 +40,25 @@ export async function GET(request: NextRequest) {
 
     // Fetch equipment with optional pagination
     const page = parseInt(searchParams.get('page') || '1');
-    const limit = parseInt(searchParams.get('limit') || '10');
+    const limit = parseInt(searchParams.get('limit') || '100'); // Increased default limit
     const skip = (page - 1) * limit;
 
+    // Use lean() for better performance and handle population errors gracefully
     const equipmentList = await Equipment.find(query)
       .populate('sport', 'sportName sportId')
+      .lean()
       .skip(skip)
       .limit(limit)
-      .sort({ name: 1 });
+      .sort({ name: 1 })
+      .catch(err => {
+        console.error('Equipment find error details:', err);
+        throw new Error(`Database query failed: ${err.message}`);
+      });
     
     const total = await Equipment.countDocuments(query);
 
     return new NextResponse(JSON.stringify({
-      equipment: equipmentList,
+      equipment: equipmentList || [],
       pagination: {
         total,
         page,
@@ -63,9 +69,15 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
-  } catch (error) {
-    console.error('Error fetching equipment:', error);
-    return new NextResponse(JSON.stringify({ error: 'Failed to fetch equipment' }), {
+  } catch (error: any) {
+    // Detailed error logging
+    console.error('Error fetching equipment details:', error);
+    console.error('Stack trace:', error.stack);
+    
+    return new NextResponse(JSON.stringify({ 
+      error: 'Failed to fetch equipment',
+      details: error.message
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
