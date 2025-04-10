@@ -50,6 +50,26 @@ governBodySchema.pre('findOneAndUpdate', function() {
   this.set({ updatedAt: new Date() });
 });
 
-const GovernBody = mongoose.model('GovernBody', governBodySchema);
+// Add this method to your governBodySchema for password comparison
+governBodySchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
+  return bcrypt.compare(candidatePassword, this.password);
+};
 
-export default GovernBody;
+// Add pre-save hook for password hashing
+governBodySchema.pre('save', async function(next) {
+  const governBody = this as any;
+  
+  // Only hash the password if it has been modified or is new
+  if (!governBody.isModified('password')) return next();
+  
+  try {
+    const salt = await bcrypt.genSalt(10);
+    governBody.password = await bcrypt.hash(governBody.password, salt);
+    next();
+  } catch (error) {
+    return next(error as Error);
+  }
+});
+
+// Export the model, checking if it already exists first
+export default mongoose.models.GovernBody || mongoose.model('GovernBody', governBodySchema);

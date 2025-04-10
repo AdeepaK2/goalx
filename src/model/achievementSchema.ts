@@ -118,4 +118,4 @@ achievementSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.model<IAchievement>('Achievement', achievementSchema);
+export default mongoose.models.Achievement || mongoose.model<IAchievement>('Achievement', achievementSchema);

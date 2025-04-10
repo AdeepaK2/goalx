@@ -260,10 +260,21 @@ export async function DELETE(request: NextRequest) {
       });
     }
     
-    // Find by _id or donorId
-    const deletedDonor = await Donor.findOneAndDelete(
-      { $or: [{ _id: id }, { donorId: id }] }
-    );
+    // Check if id is a valid MongoDB ObjectId (24 hex chars)
+    const isValidObjectId = /^[0-9a-fA-F]{24}$/.test(id);
+    
+    // Create a query that safely handles both ObjectId and donorId formats
+    let query = {};
+    if (isValidObjectId) {
+      // If it looks like an ObjectId, use both conditions
+      query = { $or: [{ _id: id }, { donorId: id }] };
+    } else {
+      // If not an ObjectId, only search by donorId to avoid casting errors
+      query = { donorId: id };
+    }
+    
+    // Find and delete the donor
+    const deletedDonor = await Donor.findOneAndDelete(query);
     
     if (!deletedDonor) {
       return new NextResponse(JSON.stringify({ error: 'Donor not found' }), {

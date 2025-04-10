@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import useSWR, { mutate } from 'swr';
+import { useRouter } from 'next/navigation';  // <-- Changed from 'next/router' to 'next/navigation'
 
 interface School {
   _id: string;
@@ -91,6 +92,7 @@ const fetcher = async (url: string) => {
 };
 
 const SchoolsContent: React.FC = () => {
+  const router = useRouter();
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [actionInProgress, setActionInProgress] = useState<string | null>(null);
   const [showAddModal, setShowAddModal] = useState<boolean>(false);
@@ -464,6 +466,11 @@ const SchoolsContent: React.FC = () => {
     refreshData(); // Using the mutate function from useSWR directly
   };
 
+  // Add navigation function to view school details
+  const navigateToSchoolDetails = (schoolId: string) => {
+    router.push(`/admin/dashboard/${schoolId}`);
+  };
+
   return (
     <div className="bg-white shadow rounded-lg p-6">
       <h1 className="text-2xl font-semibold text-gray-900 mb-6">School Management</h1>
@@ -550,7 +557,9 @@ const SchoolsContent: React.FC = () => {
                   <tbody className="divide-y divide-gray-200">
                     {pendingSchools.map((school: School) => (
                       <tr key={school._id} className="hover:bg-gray-50">
-                        <td className="py-4 px-4 text-sm font-medium text-gray-900">{school.name}</td>
+                        <td className="py-4 px-4 text-sm font-medium text-gray-900">
+                          {school.name}
+                        </td>
                         <td className="py-4 px-4 text-sm text-gray-500">
                           {school.location.district}, {school.location.province}
                         </td>
@@ -602,7 +611,11 @@ const SchoolsContent: React.FC = () => {
                   </thead>
                   <tbody className="divide-y divide-gray-200">
                     {verifiedSchools.map((school: School) => (
-                      <tr key={school._id} className="hover:bg-gray-50">
+                      <tr 
+                        key={school._id} 
+                        className="hover:bg-gray-50 cursor-pointer"
+                        onClick={() => navigateToSchoolDetails(school._id)}
+                      >
                         <td className="py-4 px-4 text-sm font-medium text-gray-900">{school.name}</td>
                         <td className="py-4 px-4 text-sm text-gray-500">
                           {school.location.district}, {school.location.province}
