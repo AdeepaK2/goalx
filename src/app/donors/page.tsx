@@ -4,6 +4,7 @@ import NavBar from "@/components/donorContent/navBar";
 import Dashboard from "@/components/donorContent/dashboard";
 import Donations from "@/components/donorContent/donations";
 import Requests from "@/components/donorContent/requests";
+import Profile from "@/components/donorContent/profile";
 import Footer from "@/components/schoolContent/footer";
 
 const Page = () => {
@@ -20,6 +21,7 @@ const Page = () => {
         {activeTab === "dashboard" && <Dashboard setActiveTab={setActiveTab} />}
         {activeTab === "donations" && <Donations />}
         {activeTab === "requests" && <Requests />}
+        {activeTab === "profile" && <Profile />}
       </main>
 
       <Footer />

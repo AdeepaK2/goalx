@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react"; // Import useEffect
 import { FiAward, FiPlus, FiX } from "react-icons/fi"; // Using FiAward for achievements, FiPlus for adding, FiX for closing
 
 // Define the structure for an achievement
@@ -27,6 +27,18 @@ interface AchievementFormData {
   studentGrade: string;
   record: string;
   date: string;
+}
+
+// Define a type for the action trigger prop
+type ActionTrigger = {
+  tab: string;
+  action: string;
+} | null;
+
+// Define props for Achievements component
+interface AchievementsProps {
+  actionTrigger?: ActionTrigger; // Make optional or provide default null in parent
+  clearActionTrigger?: () => void; // Make optional or provide default empty fn
 }
 
 const achievementsData: Achievement[] = [
@@ -107,7 +119,10 @@ const achievementsData: Achievement[] = [
   },
 ];
 
-const Achievements = () => {
+const Achievements: React.FC<AchievementsProps> = ({
+  actionTrigger,
+  clearActionTrigger,
+}) => {
   const [showModal, setShowModal] = useState(false);
   const [achievementForm, setAchievementForm] = useState<AchievementFormData>({
     eventName: "",
@@ -118,6 +133,17 @@ const Achievements = () => {
     record: "",
     date: "",
   });
+
+  // Effect to watch for the action trigger
+  useEffect(() => {
+    if (
+      actionTrigger?.tab === "achievements" &&
+      actionTrigger?.action === "openModal"
+    ) {
+      handleReportAchievement(); // Open the modal
+      clearActionTrigger?.(); // Clear the trigger so it doesn't re-run
+    }
+  }, [actionTrigger, clearActionTrigger]); // Dependencies for the effect
 
   const handleReportAchievement = () => {
     setShowModal(true);

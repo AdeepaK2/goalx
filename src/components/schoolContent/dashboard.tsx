@@ -4,10 +4,14 @@ import { FiPlus, FiAward, FiBox, FiCheckCircle } from "react-icons/fi";
 // Define props type
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
+  onReportAchievementClick: () => void; // Add prop for the click handler
 }
 
-// Add setActiveTab to the component props
-const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
+// Add setActiveTab and onReportAchievementClick to the component props
+const Dashboard: React.FC<DashboardProps> = ({
+  setActiveTab,
+  onReportAchievementClick, // Destructure the new prop
+}) => {
   // Sample data for requested items
   const itemsRequestedData = [
     {
@@ -327,7 +331,10 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
               <tr>
                 <td colSpan={4} className="">
                   <div className="flex justify-center py-6">
-                    <button className="group w-full px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center">
+                    <button
+                      onClick={onReportAchievementClick} // Use the passed handler here
+                      className="group w-full px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center"
+                    >
                       <FiPlus className="mr-2 transition-transform group-hover:rotate-90" />
                       <span>Report Achievement</span>
                     </button>

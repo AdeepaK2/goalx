@@ -71,7 +71,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
 
             <div className="flex items-center ml-4">
               <div className="relative">
-                <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onClick={() => setActiveTab("profile")}>
                   <span className="sr-only">Open user menu</span>
                   <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
                     <FiUser />
@@ -151,11 +151,8 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             </div>
             <div className="mt-3 space-y-1">
-              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
+              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100" onClick={() => setActiveTab("profile")}>
                 Profile
-              </button>
-              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
-                Settings
               </button>
               <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
                 Logout
