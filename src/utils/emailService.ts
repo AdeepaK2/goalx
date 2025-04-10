@@ -54,23 +54,75 @@ export const sendVerificationEmail = async (
   const verificationUrl = `${baseUrl}/verify`;
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Welcome to GoalX!</h2>
-      <p>Hello ${displayName},</p>
-      <p>Thank you for registering as a donor with GoalX. Your verification code is:</p>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px; background-color: #f0f0f0; border-radius: 4px;">
-          ${verificationCode}
+    <style>
+        /* Basic styles for better email client compatibility */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #1e0fbf; /* Primary color */
+            margin-top: 0;
+        }
+        p {
+            line-height: 1.6;
+            color: #333333;
+        }
+        .verification-code-container {
+            text-align: center;
+            margin: 30px 0;
+        }
+        .verification-code {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            padding: 15px;
+            background-color: #f0f0f0;
+            border-radius: 4px;
+            display: inline-block; /* Center the block */
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555555;
+        }
+        a {
+            color: #1e0fbf; /* Link color */
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+    <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e0fbf; margin-top: 0;">Welcome to GoalX!</h2>
+        <p style="line-height: 1.6; color: #333333;">Hello ${displayName},</p>
+        <p style="line-height: 1.6; color: #333333;">Thank you for registering as a donor with GoalX. Your verification code is:</p>
+
+        <div class="verification-code-container" style="text-align: center; margin: 30px 0;">
+            <div class="verification-code" style="font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px; background-color: #f0f0f0; border-radius: 4px; display: inline-block;">
+                ${verificationCode}
+            </div>
         </div>
-      </div>
-      
-      <p>Please enter this code on the verification page to complete your registration.</p>
-      <p>Alternatively, you can visit <a href="${verificationUrl}">${verificationUrl}</a> and enter the code there.</p>
-      
-      <p>This verification code will expire in 24 hours.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
+
+        <p style="line-height: 1.6; color: #333333;">Please enter this code on the verification page to complete your registration.</p>
+        <p style="line-height: 1.6; color: #333333;">Alternatively, you can visit <a href="${verificationUrl}" style="color: #1e0fbf; text-decoration: none;">this link</a> and enter the code there.</p>
+
+        <p style="line-height: 1.6; color: #333333;">This verification code will expire in 24 hours.</p>
+
+        <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
   `;
 
@@ -87,23 +139,81 @@ export const sendSchoolVerificationEmail = async (
   const verificationUrl = `${baseUrl}/verify?type=school&email=${encodeURIComponent(email)}`;
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Welcome to GoalX!</h2>
-      <p>Thank you for registering ${schoolName} with GoalX. Your verification code is:</p>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px; background-color: #f0f0f0; border-radius: 4px;">
-          ${verificationCode}
+    <html>
+<head>  <!-- Added head tag -->
+    
+</head> <!-- Added closing head tag -->
+<body>
+    <style>
+        /* Basic styles for better email client compatibility */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #1e0fbf; /* Primary color */
+            margin-top: 0;
+        }
+        .verification-code-box {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9f9f9; /* Light background for the code */
+            border-left: 4px solid #1e0fbf; /* Primary color border */
+            border-radius: 4px;
+        }
+        .verification-code {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #333333; /* Darker text for code */
+        }
+        p {
+            line-height: 1.6;
+            color: #333333;
+        }
+        a {
+            color: #1e0fbf; /* Link color */
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555555;
+        }
+    </style>
+    <div class="container" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e0fbf; margin-top: 0;">Welcome to GoalX!</h2>
+        <p style="line-height: 1.6; color: #333333;">Thank you for registering ${schoolName} with GoalX. Your verification code is:</p>
+
+        <div class="verification-code-box" style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f9f9f9; border-left: 4px solid #1e0fbf; border-radius: 4px;">
+          <div class="verification-code" style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333333;">
+            ${verificationCode}
+          </div>
         </div>
-      </div>
-      
-      <p>Please enter this code on the verification page to complete your school's registration.</p>
-      <p>Alternatively, you can visit <a href="${verificationUrl}">${verificationUrl}</a> and enter the code there.</p>
-      
-      <p>This verification code will expire in 24 hours.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
+
+        <p style="line-height: 1.6; color: #333333;">Please enter this code on the verification page to complete your school's registration.</p>
+        <p style="line-height: 1.6; color: #333333;">Alternatively, you can visit <a href="${verificationUrl}" style="color: #1e0fbf; text-decoration: none;">${verificationUrl}</a> and enter the code there.</p>
+
+        <p style="line-height: 1.6; color: #333333;">This verification code will expire in 24 hours.</p>
+
+        <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
+</body>
+</html>
   `;
 
   await sendEmail(email, 'Verify your GoalX school account', htmlContent);
@@ -119,22 +229,74 @@ export const sendGovernBodyVerificationEmail = async (
   const verificationUrl = `${baseUrl}/verify?type=govern&email=${encodeURIComponent(email)}`;
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Welcome to GoalX!</h2>
-      <p>Thank you for registering ${organizationName} with GoalX. Your verification code is:</p>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <div style="font-size: 32px; font-weight: bold; letter-spacing: 5px; padding: 15px; background-color: #f0f0f0; border-radius: 4px;">
-          ${verificationCode}
-        </div>
+    <style>
+        /* Basic styles for better email client compatibility */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #1e0fbf; /* Primary color */
+            margin-top: 0;
+        }
+        p {
+            line-height: 1.6;
+            color: #333333;
+        }
+        .verification-box {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background-color: #f9f9f9;
+            border-left: 4px solid #1e0fbf;
+            border-radius: 4px;
+        }
+        .verification-code {
+            font-size: 32px;
+            font-weight: bold;
+            letter-spacing: 5px;
+            color: #333333;
+            margin: 10px 0;
+        }
+        a {
+            color: #1e0fbf;
+            text-decoration: none;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555555;
+            line-height: 1.6;
+        }
+        /* Note: Inline styles are generally preferred for maximum email client compatibility. */
+    </style>
+    <div class="container" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+      <h2 style="color: #1e0fbf; margin-top: 0;">Welcome to GoalX!</h2>
+      <p style="line-height: 1.6; color: #333333;">Thank you for registering ${organizationName} with GoalX. Your verification code is:</p>
+
+      <div class="verification-box" style="text-align: center; margin: 30px 0; padding: 20px; background-color: #f9f9f9; border-left: 4px solid #1e0fbf; border-radius: 4px;">
+      <p style="line-height: 1.6; color: #333333; margin-bottom: 10px;">Please enter this code on the verification page:</p>
+      <div class="verification-code" style="font-size: 32px; font-weight: bold; letter-spacing: 5px; color: #333333; margin: 10px 0;">
+        ${verificationCode}
       </div>
-      
-      <p>Please enter this code on the verification page to complete your registration.</p>
-      <p>Alternatively, you can visit <a href="${verificationUrl}">${verificationUrl}</a> and enter the code there.</p>
-      
-      <p>This verification code will expire in 24 hours.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
+      </div>
+
+      <p style="line-height: 1.6; color: #333333;">Alternatively, you can visit <a href="${verificationUrl}" style="color: #1e0fbf; text-decoration: none;">${verificationUrl}</a> and enter the code there.</p>
+
+      <p style="line-height: 1.6; color: #333333;">This verification code will expire in 24 hours.</p>
+
+      <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
   `;
 
@@ -150,21 +312,66 @@ export const sendWelcomeEmail = async (
   const dashboardUrl = `${baseUrl}/dashboard`;
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Welcome to GoalX!</h2>
-      <p>Hello ${displayName},</p>
-      <p>Your email has been successfully verified. Thank you for joining GoalX as a donor!</p>
-      
-      <div style="text-align: center; margin: 30px 0;">
-        <a href="${dashboardUrl}" style="background-color: #1e0fbf; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-          Go to Dashboard
-        </a>
-      </div>
-      
-      <p>With your support, we can help more schools and students achieve their goals.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
-    </div>
+    <style>
+                /* Basic styles for better email client compatibility */
+                body {
+                    font-family: Arial, sans-serif;
+                    margin: 0;
+                    padding: 0;
+                    background-color: #f4f4f4;
+                }
+                .container {
+                    max-width: 600px;
+                    margin: 20px auto;
+                    background-color: #ffffff;
+                    padding: 30px;
+                    border-radius: 8px;
+                    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+                }
+                h2 {
+                    color: #1e0fbf; /* Primary color */
+                    margin-top: 0;
+                }
+                p {
+                    line-height: 1.6;
+                    color: #333333;
+                }
+                .footer {
+                    margin-top: 20px;
+                    font-size: 0.9em;
+                    color: #555555;
+                }
+                .button-container {
+                    text-align: center;
+                    margin: 30px 0;
+                }
+                .button {
+                    background-color: #1e0fbf;
+                    color: white;
+                    padding: 12px 24px;
+                    text-decoration: none;
+                    border-radius: 4px;
+                    font-weight: bold;
+                    display: inline-block; /* Ensures padding and margin work correctly */
+                }
+            </style>
+        </head>
+        <body style="font-family: Arial, sans-serif; margin: 0; padding: 0; background-color: #f4f4f4;">
+            <div class="container" style="max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+                <h2 style="color: #1e0fbf; margin-top: 0;">Welcome to GoalX!</h2>
+                <p style="line-height: 1.6; color: #333333;">Hello ${displayName},</p>
+                <p style="line-height: 1.6; color: #333333;">Your email has been successfully verified. Thank you for joining GoalX as a donor!</p>
+
+                <div class="button-container" style="text-align: center; margin: 30px 0;">
+                  <a href="${dashboardUrl}" class="button" style="background-color: #1e0fbf; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">
+                    Go to Dashboard
+                  </a>
+                </div>
+
+                <p style="line-height: 1.6; color: #333333;">With your support, we can help more schools and students achieve their goals.</p>
+
+                <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
+              </div>
   `;
 
   await sendEmail(email, 'Welcome to GoalX!', htmlContent);
@@ -218,23 +425,72 @@ export const sendDonationConfirmationEmail = async (
   });
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Thank You for Your Donation!</h2>
-      <p>Hello ${displayName},</p>
-      <p>Thank you for your generous donation to GoalX. Your contribution will make a real difference!</p>
-      
-      <div style="margin: 20px 0; padding: 20px; border: 1px solid #e5e5e5; border-radius: 4px; background-color: #f9f9f9;">
-        <h3 style="margin-top: 0;">Donation Details</h3>
-        <p><strong>Amount:</strong> $${amount.toFixed(2)}</p>
-        <p><strong>Project:</strong> ${projectName}</p>
-        <p><strong>Donation ID:</strong> ${donationId}</p>
-        <p><strong>Date:</strong> ${formattedDate}</p>
+   <style>
+            /* Basic styles for better email client compatibility */
+            body {
+                font-family: Arial, sans-serif;
+                margin: 0;
+                padding: 0;
+                background-color: #f4f4f4;
+            }
+            .container {
+                max-width: 600px;
+                margin: 20px auto;
+                background-color: #ffffff;
+                padding: 30px;
+                border-radius: 8px;
+                box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            }
+            h2 {
+                color: #1e0fbf; /* Primary color */
+                margin-top: 0;
+            }
+            h3 {
+                color: #6e11b0; /* Secondary color */
+                margin-top: 0;
+            }
+            .highlight-box {
+                margin: 20px 0;
+                padding: 20px;
+                border-left: 4px solid #1e0fbf; /* Primary color border */
+                background-color: #f9f9f9;
+                border-radius: 4px;
+            }
+            p {
+                line-height: 1.6;
+                color: #333333;
+            }
+            .footer {
+                margin-top: 20px;
+                font-size: 0.9em;
+                color: #555555;
+                line-height: 1.6;
+            }
+            a {
+                color: #1e0fbf; /* Primary color for links */
+                text-decoration: none;
+            }
+            a:hover {
+                text-decoration: underline;
+            }
+        </style>
+      <div class="container" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e0fbf; margin-top: 0;">Thank You for Your Donation!</h2>
+        <p style="line-height: 1.6; color: #333333;">Hello ${displayName},</p>
+        <p style="line-height: 1.6; color: #333333;">Thank you for your generous donation to GoalX. Your contribution will make a real difference!</p>
+
+        <div class="highlight-box" style="margin: 20px 0; padding: 20px; border-left: 4px solid #1e0fbf; background-color: #f9f9f9; border-radius: 4px;">
+          <h3 style="margin-top: 0; color: #6e11b0;">Donation Details</h3>
+          <p style="line-height: 1.6; color: #333333;"><strong>Amount:</strong> $${amount.toFixed(2)}</p>
+          <p style="line-height: 1.6; color: #333333;"><strong>Project:</strong> ${projectName}</p>
+          <p style="line-height: 1.6; color: #333333;"><strong>Donation ID:</strong> ${donationId}</p>
+          <p style="line-height: 1.6; color: #333333;"><strong>Date:</strong> ${formattedDate}</p>
+        </div>
+
+        <p style="line-height: 1.6; color: #333333;">You can view all your donations in your <a href="${donationsUrl}" style="color: #1e0fbf; text-decoration: none;">donation history</a>.</p>
+
+        <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
       </div>
-      
-      <p>You can view all your donations in your <a href="${donationsUrl}">donation history</a>.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
-    </div>
   `;
 
   await sendEmail(email, 'Thank You for Your Donation', htmlContent);
@@ -284,20 +540,60 @@ export const sendSchoolRegistrationNotificationEmail = async (
   const baseUrl = await getBaseUrl();
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Thank You for Registering with GoalX!</h2>
-      <p>Dear ${schoolName} Administrator,</p>
-      <p>Your school email has been successfully verified. Thank you for joining GoalX!</p>
-      
-      <div style="margin: 20px 0; padding: 20px; border: 1px solid #e5e5e5; border-radius: 4px; background-color: #f9f9f9;">
-        <h3 style="margin-top: 0;">Next Steps</h3>
-        <p>Our admin team will review your school details and contact you shortly to complete the verification process. This additional verification helps ensure the security and integrity of our platform.</p>
-        <p>Once approved, you'll receive a confirmation email with instructions for accessing your school account.</p>
-      </div>
-      
-      <p>If you have any questions, please don't hesitate to contact our support team.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
+    <style>
+        /* Basic styles for better email client compatibility */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #1e0fbf; /* Primary color */
+            margin-top: 0;
+        }
+        h3 {
+            color: #6e11b0; /* Secondary color */
+        }
+        .highlight-box {
+            margin: 20px 0;
+            padding: 20px;
+            border-left: 4px solid #1e0fbf; /* Primary color border */
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        p {
+            line-height: 1.6;
+            color: #333333;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555555;
+        }
+    </style>
+    <div class="container" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e0fbf; margin-top: 0;">Thank You for Registering with GoalX!</h2>
+        <p style="line-height: 1.6; color: #333333;">Dear ${schoolName} Administrator,</p>
+        <p style="line-height: 1.6; color: #333333;">Your school email has been successfully verified. Thank you for joining GoalX!</p>
+
+        <div class="highlight-box" style="margin: 20px 0; padding: 20px; border-left: 4px solid #1e0fbf; background-color: #f9f9f9; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #6e11b0;">Next Steps</h3>
+            <p style="line-height: 1.6; color: #333333;">Our admin team will review your school details and contact you shortly to complete the verification process. This additional verification helps ensure the security and integrity of our platform.</p>
+            <p style="line-height: 1.6; color: #333333;">Once approved, you'll receive a confirmation email with instructions for accessing your school account.</p>
+        </div>
+
+        <p style="line-height: 1.6; color: #333333;">If you have any questions, please don't hesitate to contact our support team.</p>
+
+        <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
   `;
 
@@ -312,20 +608,60 @@ export const sendGovernBodyRegistrationNotificationEmail = async (
   const baseUrl = await getBaseUrl();
   
   const htmlContent = `
-    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-      <h2>Thank You for Registering with GoalX!</h2>
-      <p>Dear ${organizationName} Administrator,</p>
-      <p>Your email has been successfully verified. Thank you for joining GoalX!</p>
-      
-      <div style="margin: 20px 0; padding: 20px; border: 1px solid #e5e5e5; border-radius: 4px; background-color: #f9f9f9;">
-        <h3 style="margin-top: 0;">Next Steps</h3>
-        <p>Our admin team will review your organization details and contact you shortly to complete the verification process. This additional verification helps ensure the security and integrity of our platform.</p>
-        <p>Once approved, you'll receive a confirmation email with instructions for accessing your account.</p>
-      </div>
-      
-      <p>If you have any questions, please don't hesitate to contact our support team.</p>
-      
-      <p>Best regards,<br>The GoalX Team</p>
+    <style>
+        /* Basic styles for better email client compatibility */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background-color: #ffffff;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        h2 {
+            color: #1e0fbf; /* Primary color */
+            margin-top: 0;
+        }
+        h3 {
+            color: #6e11b0; /* Secondary color */
+        }
+        .highlight-box {
+            margin: 20px 0;
+            padding: 20px;
+            border-left: 4px solid #1e0fbf; /* Primary color border */
+            background-color: #f9f9f9;
+            border-radius: 4px;
+        }
+        p {
+            line-height: 1.6;
+            color: #333333;
+        }
+        .footer {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555555;
+        }
+    </style>
+    <div class="container" style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e0fbf; margin-top: 0;">Thank You for Registering with GoalX!</h2>
+        <p style="line-height: 1.6; color: #333333;">Dear ${organizationName} Administrator,</p>
+        <p style="line-height: 1.6; color: #333333;">Your email has been successfully verified. Thank you for joining GoalX!</p>
+
+        <div class="highlight-box" style="margin: 20px 0; padding: 20px; border-left: 4px solid #1e0fbf; background-color: #f9f9f9; border-radius: 4px;">
+            <h3 style="margin-top: 0; color: #6e11b0;">Next Steps</h3>
+            <p style="line-height: 1.6; color: #333333;">Our admin team will review your organization details and contact you shortly to complete the verification process. This additional verification helps ensure the security and integrity of our platform.</p>
+            <p style="line-height: 1.6; color: #333333;">Once approved, you'll receive a confirmation email with instructions for accessing your account.</p>
+        </div>
+
+        <p style="line-height: 1.6; color: #333333;">If you have any questions, please don't hesitate to contact our support team.</p>
+
+        <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
   `;
 
