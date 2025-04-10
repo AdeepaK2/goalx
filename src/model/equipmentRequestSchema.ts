@@ -197,4 +197,4 @@ equipmentRequestSchema.pre('save', function(next) {
   next();
 });
 
-export default mongoose.model<IEquipmentRequest>('EquipmentRequest', equipmentRequestSchema);
+export default mongoose.models.EquipmentRequest || mongoose.model<IEquipmentRequest>('EquipmentRequest', equipmentRequestSchema);

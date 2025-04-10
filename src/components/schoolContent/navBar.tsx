@@ -1,22 +1,112 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Image from "next/image";
-import Link from "next/link";
-import { FiMenu, FiX, FiUser, FiLogOut } from "react-icons/fi";
+import { useRouter } from "next/navigation";
+import { FiMenu, FiX, FiUser, FiLogOut, FiLoader } from "react-icons/fi";
 
 interface NavBarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
 }
 
+interface SchoolData {
+  id: string;
+  schoolId: string;
+  name: string;
+  email: string;
+  profilePicture?: string;
+}
+
 const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
+  const router = useRouter();
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [schoolData, setSchoolData] = useState<SchoolData | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
 
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "requests", label: "Requests" },
     { id: "borrowals", label: "Borrowals" },
+    { id: "donations", label: "Donations" },
+    { id: "inquiries", label: "Inquiries" },
     { id: "achievements", label: "Achievements" },
   ];
+
+  // Fetch school data on component mount
+  useEffect(() => {
+    const fetchSchoolData = async () => {
+      try {
+        setIsLoading(true);
+        const response = await fetch("/api/auth/school/me");
+        
+        if (!response.ok) {
+          throw new Error(`Failed to fetch: ${response.status} ${response.statusText}`);
+        }
+        
+        const data = await response.json();
+
+        if (data.success && data.school) {
+          setSchoolData({
+            id: data.school.id,
+            schoolId: data.school.schoolId,
+            name: data.school.name,
+            email: data.school.email,
+            profilePicture: data.school.profilePicture || undefined
+          });
+        } else {
+          setError(data.error || "Could not load school information");
+        }
+      } catch (err) {
+        console.error("Error fetching school data:", err);
+        setError("Failed to load school data");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchSchoolData();
+  }, []);
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        }
+      });
+      
+      if (response.ok) {
+        // Clear any local state/storage if needed
+        localStorage.removeItem("schoolData");
+        
+        // Redirect to login page
+        window.location.href = "/login";
+      } else {
+        const errorData = await response.json();
+        console.error("Logout failed:", errorData);
+        alert("Failed to log out. Please try again.");
+      }
+    } catch (error) {
+      console.error("Error during logout:", error);
+      alert("An error occurred during logout");
+    } finally {
+      setIsLoggingOut(false);
+    }
+  };
+
+  // Function to get placeholder initials if no profile picture
+  const getInitials = (name: string) => {
+    return name
+      .split(' ')
+      .map(part => part[0])
+      .join('')
+      .toUpperCase()
+      .substring(0, 2);
+  };
 
   return (
     <nav className="bg-white shadow-sm">
@@ -56,20 +146,44 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
           {/* School Logo and User Section */}
           <div className="hidden md:flex items-center">
             <div className="flex items-center pr-4 border-r border-gray-200">
-              <Image
-                src="/logo.png"
-                alt="School Logo"
-                width={40}
-                height={40}
-                className="h-10 w-auto"
-                priority
-              />
-              <span className="ml-2 text-gray-700 font-medium">
-                Central High School
-              </span>
+              {isLoading ? (
+                <div className="flex items-center space-x-2">
+                  <FiLoader className="animate-spin h-5 w-5 text-gray-400" />
+                  <span className="text-gray-500">Loading...</span>
+                </div>
+              ) : error ? (
+                <div className="text-red-500 text-sm">{error}</div>
+              ) : (
+                <>
+                  {schoolData?.profilePicture ? (
+                    <Image
+                      src={`/api/file/download?file=${schoolData.profilePicture}`}
+                      alt={`${schoolData.name} Logo`}
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded-full object-cover"
+                      priority
+                      onError={(e) => {
+                        // Fallback if image fails to load
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = '/school-placeholder.png';
+                      }}
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                      {schoolData?.name ? getInitials(schoolData.name) : <FiUser className="h-6 w-6" />}
+                    </div>
+                  )}
+                  <span className="ml-2 text-gray-700 font-medium">
+                    {schoolData?.name || "School"}
+                  </span>
+                </>
+              )}
             </div>
 
             <div className="flex items-center ml-4">
+<<<<<<< HEAD
               <div className="relative">
                 <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500" onClick={() => setActiveTab("profile")}>
                   <span className="sr-only">Open user menu</span>
@@ -78,9 +192,23 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                   </div>
                 </button>
               </div>
+=======
+>>>>>>> 7767e33846e8dacf2a0646fba16d1dec22a4ba43
               <div className="ml-4">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
-                  <FiLogOut className="mr-2" /> Logout
+                <button 
+                  onClick={handleLogout}
+                  disabled={isLoggingOut}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isLoggingOut ? (
+                    <>
+                      <FiLoader className="animate-spin mr-2" /> Logging out...
+                    </>
+                  ) : (
+                    <>
+                      <FiLogOut className="mr-2" /> Logout
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -109,53 +237,76 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
       {mobileMenuOpen && (
         <div className="md:hidden">
           <div className="pt-2 pb-3 space-y-1">
-            <Link
-              href="/schools"
-              className="text-blue-600 bg-blue-50 block pl-3 pr-4 py-2 border-l-4 border-blue-500 text-base font-medium"
-            >
-              Dashboard
-            </Link>
-            <Link
-              href="/schools/equipment"
-              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            >
-              Equipment
-            </Link>
-            <Link
-              href="/schools/achievements"
-              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            >
-              Achievements
-            </Link>
-            <Link
-              href="/schools/calendar"
-              className="border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
-            >
-              Calendar
-            </Link>
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`w-full text-left ${
+                  activeTab === tab.id
+                    ? "text-blue-600 bg-blue-50 block pl-3 pr-4 py-2 border-l-4 border-blue-500 text-base font-medium"
+                    : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700 block pl-3 pr-4 py-2 border-l-4 text-base font-medium"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
           </div>
           <div className="pt-4 pb-3 border-t border-gray-200">
-            <div className="flex items-center px-4">
-              <div className="flex-shrink-0">
-                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
-                  <FiUser className="h-5 w-5" />
+            {isLoading ? (
+              <div className="flex items-center justify-center py-3">
+                <FiLoader className="animate-spin h-5 w-5 text-gray-400" />
+                <span className="ml-2 text-gray-500">Loading school data...</span>
+              </div>
+            ) : (
+              <div className="flex items-center px-4">
+                <div className="flex-shrink-0">
+                  {schoolData?.profilePicture ? (
+                    <Image
+                      src={`/api/file/download?file=${schoolData.profilePicture}`}
+                      alt="School Logo"
+                      width={40}
+                      height={40}
+                      className="h-10 w-10 rounded-full object-cover"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        target.onerror = null;
+                        target.src = '/school-placeholder.png';
+                      }}
+                    />
+                  ) : (
+                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                      {schoolData?.name ? getInitials(schoolData.name) : <FiUser className="h-5 w-5" />}
+                    </div>
+                  )}
+                </div>
+                <div className="ml-3">
+                  <div className="text-base font-medium text-gray-800">
+                    {schoolData?.name || "School"}
+                  </div>
+                  <div className="text-sm font-medium text-gray-500">
+                    {schoolData?.email || ""}
+                  </div>
                 </div>
               </div>
-              <div className="ml-3">
-                <div className="text-base font-medium text-gray-800">
-                  Admin User
-                </div>
-                <div className="text-sm font-medium text-gray-500">
-                  admin@centralhs.edu
-                </div>
-              </div>
-            </div>
+            )}
             <div className="mt-3 space-y-1">
+<<<<<<< HEAD
               <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100" onClick={() => setActiveTab("profile")}>
                 Profile
               </button>
               <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
                 Logout
+=======
+              <button 
+                onClick={handleLogout} 
+                disabled={isLoggingOut}
+                className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {isLoggingOut ? "Logging out..." : "Logout"}
+>>>>>>> 7767e33846e8dacf2a0646fba16d1dec22a4ba43
               </button>
             </div>
           </div>
