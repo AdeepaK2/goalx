@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import NavBar from "@/components/donorContent/navBar";
 import Dashboard from "@/components/donorContent/dashboard";
 import Donations from "@/components/donorContent/donations";
-import Requests from "@/components/donorContent/requests";
+import Requests from "@/components/donorContent/picks";
 import Footer from "@/components/schoolContent/footer";
 import { useRouter } from "next/navigation";
 

@@ -14,7 +14,7 @@ const NavBar = ({ activeTab, setActiveTab, donorName = "User" }: NavBarProps) =>
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "donations", label: "Donations" },
-    { id: "requests", label: "Requests" }
+    { id: "requests", label: "Schools" }
   ];
 
   // Handle logout

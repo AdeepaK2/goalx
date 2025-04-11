@@ -72,14 +72,37 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, donorData }) => {
         }
         try {
             setDonorLoading(true);
+            
+            // First get donor info
             const response = await fetch(`/api/donor?id=${donorData.id}`);
             if (!response.ok) throw new Error("Failed to fetch donor information");
             const data = await response.json();
+            
+            // Then fetch all donations to calculate total
+            const donationsResponse = await fetch(`/api/donation?donor=${donorData.id}&limit=100`);
+            let totalAmount = 0;
+            let hasMonetaryDonations = false;
+            
+            if (donationsResponse.ok) {
+                const donationsData = await donationsResponse.json();
+                if (donationsData && donationsData.donations && donationsData.donations.length > 0) {
+                    hasMonetaryDonations = true;
+                    // Calculate total from monetary donations
+                    totalAmount = donationsData.donations.reduce((sum: number, donation: Donation) => {
+                        if (donation.donationType === "MONETARY" && donation.monetaryDetails?.amount) {
+                            return sum + donation.monetaryDetails.amount;
+                        }
+                        return sum;
+                    }, 0);
+                }
+            }
+            
             setDonorInfo({
-                totalDonated: data.totalDonations || "10.4k"
+                totalDonated: hasMonetaryDonations ? totalAmount.toLocaleString() : "0"
             });
         } catch (err) {
             console.error("Error fetching donor information:", err);
+            setDonorInfo({ totalDonated: "0" });
         } finally {
             setDonorLoading(false);
         }
@@ -182,10 +205,14 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, donorData }) => {
                     <p className="text-white text-3xl mt-4 text-center max-w-2xl mx-auto">
                         {donorLoading ? (
                             <span className="inline-block w-32 h-10 bg-white/30 animate-pulse rounded"></span>
-                        ) : (
+                        ) : donorInfo.totalDonated !== "0" ? (
                             <>
                                 You have donated{" "}
                                 <span className="text-5xl">${donorInfo.totalDonated}</span> worth of equipment to Sri Lankan School Sports!
+                            </>
+                        ) : (
+                            <>
+                                Make your first donation today and help Sri Lankan schools achieve sporting excellence!
                             </>
                         )}
                     </p>
@@ -266,7 +293,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, donorData }) => {
                             <div className="text-center py-8">
                                 <p className="text-gray-500 mb-4">You haven't made any donations yet.</p>
                                 <button
-                                    onClick={() => setActiveTab("donate")}
+                                    onClick={() => setActiveTab("donations")}
                                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
                                 >
                                     <FiPlus className="mr-2" /> Make Your First Donation
@@ -336,7 +363,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, donorData }) => {
                                 <p className="text-gray-500">Once you make donations, you'll see achievements from the schools you support.</p>
                                 <p className="text-gray-500">Your contributions help make these achievements possible!</p>
                                 <button
-                                    onClick={() => setActiveTab("schools")}
+                                    onClick={() => setActiveTab("requests")}
                                     className="inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-purple-500"
                                 >
                                     <FiAward className="mr-2" /> Explore School Achievements
@@ -358,14 +385,21 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, donorData }) => {
                             <div className="text-center sm:text-left">
                                 <h3 className="text-lg font-medium text-blue-900">Ready to make an impact?</h3>
                                 <p className="mt-1 text-sm text-blue-700">
-                                    Your donations can help Sri Lankan schools achieve sporting excellence. Our team is ready to assist you.
+                                    Your donations directly fund sporting equipment, facilities, and opportunities for Sri Lankan school children. 
+                                    Even small contributions can make a huge difference!
                                 </p>
-                                <div className="mt-3">
+                                <div className="mt-3 flex space-x-3">
                                     <button
                                         onClick={() => setActiveTab("donations")}
                                         className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
                                     >
                                         Make a Donation
+                                    </button>
+                                    <button
+                                        onClick={() => setActiveTab("schools")}
+                                        className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-blue-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                                    >
+                                        Browse Schools
                                     </button>
                                 </div>
                             </div>
