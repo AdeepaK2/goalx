@@ -17,15 +17,14 @@ export default function Header() {
         setIsScrolled(false)
       }
     }
-    
+
     window.addEventListener('scroll', handleScroll)
     return () => window.removeEventListener('scroll', handleScroll)
   }, [])
 
   return (
-    <header className={`w-full sticky top-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'bg-white shadow-md' : 'bg-white'
-    }`}>
+    <header className={`w-full sticky top-0 z-50 transition-all duration-300 ${isScrolled ? 'bg-white shadow-md' : 'bg-white'
+      }`}>
       <div className="max-w-7xl mx-auto px-4 md:px-8">
         <div className="flex justify-between items-center h-20">
           {/* Logo */}
@@ -33,8 +32,8 @@ export default function Header() {
             <div className="relative w-12 h-12 overflow-hidden rounded-full  shadow-md">
               {/* Replace with your actual logo path */}
               <div className="w-full h-full  flex items-center justify-center ">
-  <img src="/logo.png" alt="logo" />
-</div>
+                <img src="/logo.png" alt="logo" />
+              </div>
 
             </div>
             <span className="text-2xl font-bold text-gray-800 tracking-tight">
@@ -60,12 +59,20 @@ export default function Header() {
 
           {/* Auth Buttons */}
           <div className="hidden md:flex items-center space-x-4">
-            <button className="px-5 py-2 text-[#1e0fbf] font-medium border-2 border-[#1e0fbf] rounded-full hover:bg-[#1e0fbf] hover:text-white transition-colors duration-300">
+            <Link
+              href="/login"
+              className="px-5 py-2 text-[#1e0fbf] font-medium border-2 border-[#1e0fbf] rounded-full hover:bg-[#1e0fbf] hover:text-white transition-colors duration-300"
+            >
               Login
-            </button>
-            <button className="px-5 py-2 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white font-medium rounded-full hover:from-[#160c8c] hover:to-[#5a0e91] transition-colors duration-300 shadow-md">
+            </Link>
+
+            <Link
+              href="/register"
+              className="px-5 py-2 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white font-medium rounded-full hover:from-[#160c8c] hover:to-[#5a0e91] transition-colors duration-300 shadow-md"
+            >
               Create Account
-            </button>
+            </Link>
+
           </div>
 
           {/* Mobile menu button */}
@@ -102,15 +109,22 @@ export default function Header() {
               How It Works
             </Link>
             <Link href="/contact" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#1e0fbf] hover:bg-gray-50 rounded-md transition-colors duration-300">
-              Contact Us 
+              Contact Us
             </Link>
             <div className="pt-4 pb-3 border-t border-gray-200">
-              <button className="w-full px-5 py-2 text-[#1e0fbf] font-medium border-2 border-[#1e0fbf] rounded-full hover:bg-[#1e0fbf] hover:text-white transition-colors duration-300 mb-2">
+              <Link
+                href="/login"
+                className="block w-full text-center px-5 py-2 text-[#1e0fbf] font-medium border-2 border-[#1e0fbf] rounded-full hover:bg-[#1e0fbf] hover:text-white transition-colors duration-300 mb-2"
+              >
                 Login
-              </button>
-              <button className="w-full px-5 py-2 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white font-medium rounded-full hover:from-[#160c8c] hover:to-[#5a0e91] transition-colors duration-300">
-                Create Account
-              </button>
+              </Link>
+              <Link href="/register" className="block px-3 py-2 text-base font-medium text-gray-700 hover:text-[#1e0fbf] hover:bg-gray-50 rounded-md transition-colors duration-300">
+              
+                <button className="w-full px-5 py-2 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white font-medium rounded-full hover:from-[#160c8c] hover:to-[#5a0e91] transition-colors duration-300">
+                  Create Account
+                </button>
+              </Link>
+
             </div>
           </div>
         </div>

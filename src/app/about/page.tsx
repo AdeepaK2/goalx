@@ -19,7 +19,7 @@ export default function AboutPage() {
               <div className="w-full md:w-1/2 relative order-2 md:order-1">
                 <div className="rounded-2xl overflow-hidden shadow-xl h-[400px] relative">
                   <Image 
-                    src="/images/about-1.jpeg" 
+                    src="/images/about-1.jpg" 
                     alt="Our Story" 
                     fill
                     className="object-cover"
@@ -116,7 +116,7 @@ export default function AboutPage() {
               <div className="w-full md:w-1/2 relative">
                 <div className="rounded-2xl overflow-hidden shadow-xl h-[400px] relative">
                   <Image 
-                    src="/images/about-2.jpeg" 
+                    src="/images/about-2.jpg" 
                     alt="Our Mission" 
                     fill
                     className="object-cover"

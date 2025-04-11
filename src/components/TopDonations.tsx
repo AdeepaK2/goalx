@@ -1,36 +1,37 @@
 // components/TopDonations.tsx
 import React from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 
 export default function TopDonations() {
   const donations = [
-    { 
-      avatar: '🏀', 
-      name: 'Mr. Pasan Perera', 
+    {
+      avatar: '🏀',
+      name: 'Mr. Pasan Perera',
       summary: '50 basketballs donated',
       date: '2 weeks ago',
       value: 'LKR2,500,000',
       recipient: 'Gampaha Central College'
     },
-    { 
-      avatar: '⚽', 
-      name: 'Metro Sports Club', 
+    {
+      avatar: '⚽',
+      name: 'Metro Sports Club',
       summary: '30 soccer balls donated',
       date: '1 month ago',
       value: 'LKR 1,500,000',
       recipient: 'Lyceyum Middle School'
     },
-    { 
-      avatar: '🏓', 
-      name: 'City Recreation Center', 
+    {
+      avatar: '🏓',
+      name: 'City Recreation Center',
       summary: '10 table tennis sets donated',
       date: '2 months ago',
       value: 'LKR 800,000',
       recipient: 'Royal Colllege'
     },
-    { 
-      avatar: '🏐', 
-      name: 'Westside Academy', 
+    {
+      avatar: '🏐',
+      name: 'Westside Academy',
       summary: '25 volleyballs donated',
       date: '3 months ago',
       value: 'LKR 1,250,000',
@@ -50,17 +51,17 @@ export default function TopDonations() {
             View All
           </button>
         </div>
-        
+
         <div className="space-y-6">
           {donations.map(({ avatar, name, summary, date, value, recipient }, index) => (
-            <div 
-              key={index} 
+            <div
+              key={index}
               className="bg-white rounded-xl shadow-md hover:shadow-lg transition-all duration-300 p-6 border border-gray-100 flex flex-col sm:flex-row items-start sm:items-center gap-6 transform hover:-translate-y-1"
             >
               <div className="w-16 h-16 rounded-full bg-gradient-to-br from-[#1e0fbf]/10 to-[#6e11b0]/10 flex items-center justify-center text-3xl shrink-0 shadow-sm">
                 {avatar}
               </div>
-              
+
               <div className="flex-grow">
                 <h3 className="font-bold text-lg text-gray-800">{name}</h3>
                 <p className="text-gray-600">{summary}</p>
@@ -71,7 +72,7 @@ export default function TopDonations() {
                   {date}
                 </div>
               </div>
-              
+
               <div className="flex flex-col items-end">
                 <span className="text-[#1e0fbf] font-semibold">{value}</span>
                 <div className="mt-2 flex items-center text-sm">
@@ -85,15 +86,18 @@ export default function TopDonations() {
             </div>
           ))}
         </div>
-        
+
         <div className="mt-10 text-center">
           <p className="text-gray-600 mb-6">Want to make a difference? Donate your unused sports equipment today!</p>
-          <button className="px-8 py-3 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white font-medium rounded-full hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300">
+          <Link
+            href="/register"
+            className="px-8 py-3 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white font-medium rounded-full hover:shadow-lg transform hover:-translate-y-1 transition-all duration-300 text-center inline-block"
+          >
             Make a Donation
-          </button>
+          </Link>
         </div>
       </div>
-      
+
       {/* Decorative elements */}
       <div className="max-w-7xl mx-auto px-4 md:px-8 relative">
         <div className="absolute -bottom-16 right-8 w-24 h-24 bg-[#1e0fbf]/5 rounded-full z-[-1]"></div>
