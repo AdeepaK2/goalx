@@ -7,9 +7,9 @@ export default function HeroSection() {
   const [currentSlide, setCurrentSlide] = useState(0)
   const images = [
     '/images/carousel-1.jpeg',
-    '/images/carousel-2.jpeg',
-    '/images/carousel-3.jpeg',
-    '/images/carousel-4.jpeg'
+    '/images/carousel-2.jpg',
+    '/images/carousel-3.jpg',
+    '/images/carousel-4.webp'
   ]
 
   // Auto-advance carousel
