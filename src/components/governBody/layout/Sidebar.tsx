@@ -2,8 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, School, Trophy } from 'lucide-react';
-import ThemeToggle from './ThemeToggle';
+import { LayoutDashboard, Package, School, Trophy, LogOut } from 'lucide-react';
 import Image from 'next/image';
 
 const navigation = [
@@ -29,6 +28,7 @@ export default function Sidebar() {
           />
         </div>
       </div>
+
       <nav className="flex-1 space-y-4 p-4">
         {navigation.map((item) => {
           const isActive = pathname === item.href;
@@ -48,8 +48,12 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
       <div className="p-4 border-t">
-        <ThemeToggle />
+        <button className="w-full flex items-center justify-center gap-2 px-4 py-2 text-sm font-semibold text-red-600 border border-red-600 rounded-lg bg-white hover:bg-red-50 transition-colors">
+          <LogOut className="h-4 w-4" />
+          Logout
+        </button>
       </div>
     </div>
   );
