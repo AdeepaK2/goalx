@@ -17,6 +17,8 @@ interface GoverningBody {
   };
   active: boolean;
   schoolsManaged?: number;
+  verified: boolean;
+  adminVerified: boolean;
 }
 
 interface Transaction {
@@ -116,6 +118,41 @@ const GoverningBodiesContent: React.FC = () => {
     setDeletingBody(null);
   };
 
+  const handleApproveBody = async (governBodyId: string) => {
+    try {
+      // Show loading toast
+      const loadingToast = toast.loading('Approving governing body...');
+      
+      const response = await fetch(`/api/govern?id=${governBodyId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ adminVerified: true }),
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to approve governing body');
+      }
+      
+      // Update the local state with the approved body
+      setGovBodies(prevBodies => 
+        prevBodies.map(body => 
+          body.governBodyId === governBodyId 
+            ? { ...body, adminVerified: true } 
+            : body
+        )
+      );
+      
+      // Show success toast and dismiss loading toast
+      toast.dismiss(loadingToast);
+      toast.success('Governing body approved successfully!');
+    } catch (error) {
+      console.error('Error approving governing body:', error);
+      toast.error('Failed to approve governing body');
+    }
+  };
+
   const filteredBodies = govBodies.filter(body => 
     body.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     body.governBodyId.toLowerCase().includes(searchQuery.toLowerCase())
@@ -178,13 +215,14 @@ const GoverningBodiesContent: React.FC = () => {
                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Abbreviation</th>
                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Specialized Sport</th>
                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Verification</th>
                 <th className="py-3 px-4 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-200">
               {filteredBodies.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="py-4 text-center text-gray-500">No governing bodies found</td>
+                  <td colSpan={7} className="py-4 text-center text-gray-500">No governing bodies found</td>
                 </tr>
               ) : (
                 filteredBodies.map((body) => (
@@ -199,6 +237,25 @@ const GoverningBodiesContent: React.FC = () => {
                       }`}>
                         {body.active === false ? 'Inactive' : 'Active'}
                       </span>
+                    </td>
+                    <td className="py-4 px-4 text-sm">
+                      {body.adminVerified ? (
+                        <span className="px-2 py-1 text-xs font-semibold rounded-full bg-green-100 text-green-800">
+                          Approved
+                        </span>
+                      ) : (
+                        <div className="flex items-center">
+                          <span className="px-2 py-1 mr-2 text-xs font-semibold rounded-full bg-yellow-100 text-yellow-800">
+                            Pending
+                          </span>
+                          <button
+                            onClick={() => handleApproveBody(body.governBodyId)}
+                            className="px-2 py-1 text-xs font-semibold rounded-full bg-indigo-100 text-indigo-800 hover:bg-indigo-200"
+                          >
+                            Approve
+                          </button>
+                        </div>
+                      )}
                     </td>
                     <td className="py-4 px-4 text-sm font-medium">
                       <button 
@@ -342,7 +399,7 @@ const GoverningBodiesContent: React.FC = () => {
       {editingBody && (
         <GoverningBodyEdit 
           governBody={editingBody}
-          onSave={handleSaveEdit}
+          onSave={(updatedBody) => handleSaveEdit(updatedBody as GoverningBody)}
           onCancel={() => setEditingBody(null)}
         />
       )}

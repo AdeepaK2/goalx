@@ -17,8 +17,8 @@ export async function middleware(request: NextRequest) {
   // Check if the request is for a donor page
   const isDonorRoute = pathname.startsWith('/donor') || pathname.startsWith('/donors');
   
-  // Check if the request is for a governing body page
-  const isGovernBodyRoute = pathname.startsWith('/govern-bodies');
+  // Check if the request is for a governing body page - ADD THE NEW PATH HERE
+  const isGovernBodyRoute = pathname.startsWith('/govern-bodies') || pathname.startsWith('/governBody');
   
   const JWT_SECRET = new TextEncoder().encode(
     process.env.JWT_SECRET || 'fallback_secret_change_this_in_production'
@@ -226,7 +226,7 @@ export async function middleware(request: NextRequest) {
   return NextResponse.next();
 }
 
-// Update matcher to include donor routes
+// Update config to include all routes
 export const config = {
   matcher: [
     '/school/:path*',
@@ -234,6 +234,7 @@ export const config = {
     '/donor/:path*',
     '/donors/:path*',
     '/govern-bodies/:path*',
+    '/governBody/:path*',
     '/login'
   ],
 };

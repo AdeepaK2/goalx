@@ -265,7 +265,7 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
       setTimeout(() => {
         console.log('Navigating to governing body dashboard...');
         // Use window.location.assign for a complete page load/refresh
-        window.location.assign('/govern-bodies');
+        window.location.assign('/governBody');
       }, 2000);
     } catch (err) {
       console.error('Login error:', err);
