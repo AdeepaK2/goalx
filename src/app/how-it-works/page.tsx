@@ -13,76 +13,109 @@ export default function HowItWorksPage() {
        
 
     {/* Process Flow Visualization - Alternating with Dotted Line */}
-<section className="w-full py-16 md:py-24 bg-gradient-to-br from-white to-gray-50">
-  <div className="max-w-7xl mx-auto px-2 md:px-4">
-    <div className="text-center max-w-3xl mx-auto mb-12">
-      <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">The GoalX Process</h2>
-      <p className="text-lg text-gray-600">
-        See how equipment flows through our platform from donors to schools.
-      </p>
-    </div>
-    
+
     <div className="relative py-12 max-w-3xl mx-auto" aria-label="GoalX Process Timeline">
-      {/* Vertical dotted line */}
-      <div className="absolute left-1/2 top-0 bottom-0 w-1 border-l-4 border-[#1e0fbf] border-dashed transform -translate-x-1/2 z-0"></div>
-      
-      {/* Process steps */}
-      <div className="relative z-10 space-y-24">
-        {/* Step 1 - Left aligned */}
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-          <div className="md:w-[calc(50%-24px)] text-right hidden md:block"></div>
-          <div className="w-16 h-16 rounded-full bg-[#f0eeff] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white transition-transform hover:scale-110 duration-300 z-10">
-            1
-          </div>
-          <div className="md:w-[calc(50%-24px)] text-center md:text-left">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Donor Lists Equipment</h3>
-            <p className="text-gray-600">Donors register and list available sports equipment they want to share with schools.</p>
-          </div>
+  {/* Vertical dotted line - only visible on desktop */}
+  <div className="hidden md:block absolute left-1/2 top-0 bottom-0 w-1 border-l-4 border-[#1e0fbf] border-dashed transform -translate-x-1/2 z-0"></div>
+
+  {/* Process steps */}
+  <div className="relative z-10 space-y-24">
+
+    {/* Step 1 */}
+    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
+      {/* Mobile: Number + Text */}
+      <div className="flex md:hidden items-start gap-4">
+        <div className="w-16 h-16 rounded-full bg-[#f0eeff] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+          1
         </div>
-        
-        {/* Step 2 - Right aligned */}
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-          <div className="md:w-[calc(50%-24px)] text-right order-2 md:order-1">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">School Requests Item</h3>
-            <p className="text-gray-600">Schools browse available equipment and submit requests for items they need.</p>
-          </div>
-          <div className="w-16 h-16 rounded-full bg-[#f5eeff] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white transition-transform hover:scale-110 duration-300 z-10 order-1 md:order-2">
-            2
-          </div>
-          <div className="md:w-[calc(50%-24px)] hidden md:block order-3"></div>
-        </div>
-        
-        {/* Step 3 - Left aligned */}
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-          <div className="md:w-[calc(50%-24px)] text-right hidden md:block"></div>
-          <div className="w-16 h-16 rounded-full bg-[#f0eeff] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white transition-transform hover:scale-110 duration-300 z-10">
-            3
-          </div>
-          <div className="md:w-[calc(50%-24px)] text-center md:text-left">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Regulator Approves</h3>
-            <p className="text-gray-600">Regulators review and approve equipment requests to ensure fair distribution.</p>
-          </div>
-        </div>
-        
-        {/* Step 4 - Right aligned */}
-        <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-          <div className="md:w-[calc(50%-24px)] text-right order-2 md:order-1">
-            <h3 className="text-xl font-semibold text-gray-800 mb-2">Equipment Delivered</h3>
-            <p className="text-gray-600">Once approved, equipment is delivered to the requesting school.</p>
-          </div>
-          <div className="w-16 h-16 rounded-full bg-[#efffef] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white transition-transform hover:scale-110 duration-300 z-10 order-1 md:order-2">
-            4
-          </div>
-          <div className="md:w-[calc(50%-24px)] hidden md:block order-3"></div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Donor Lists Equipment</h3>
+          <p className="text-gray-600 text-sm">Donors register and list available sports equipment they want to share with schools.</p>
         </div>
       </div>
-      
-      {/* Decorative elements */}
-      <div className="absolute -top-4 -left-4 w-16 h-16 bg-[#1e0fbf]/10 rounded-full z-[-1]"></div>
-      <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[#6e11b0]/10 rounded-full z-[-1]"></div>
+
+      {/* Desktop layout */}
+      <div className="hidden md:block md:w-[calc(50%-24px)] text-right"></div>
+      <div className="hidden md:flex w-16 h-16 rounded-full bg-[#f0eeff] items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+        1
+      </div>
+      <div className="hidden md:block md:w-[calc(50%-24px)] text-left">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">Donor Lists Equipment</h3>
+        <p className="text-gray-600">Donors register and list available sports equipment they want to share with schools.</p>
+      </div>
+    </div>
+
+    {/* Step 2 */}
+    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
+      <div className="flex md:hidden items-start gap-4">
+        <div className="w-16 h-16 rounded-full bg-[#f5eeff] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+          2
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">School Requests Item</h3>
+          <p className="text-gray-600 text-sm">Schools browse available equipment and submit requests for items they need.</p>
+        </div>
+      </div>
+
+      <div className="hidden md:block md:w-[calc(50%-24px)] text-right">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">School Requests Item</h3>
+        <p className="text-gray-600">Schools browse available equipment and submit requests for items they need.</p>
+      </div>
+      <div className="hidden md:flex w-16 h-16 rounded-full bg-[#f5eeff] items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+        2
+      </div>
+      <div className="hidden md:block md:w-[calc(50%-24px)]"></div>
+    </div>
+
+    {/* Step 3 */}
+    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
+      <div className="flex md:hidden items-start gap-4">
+        <div className="w-16 h-16 rounded-full bg-[#f0eeff] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+          3
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Regulator Approves</h3>
+          <p className="text-gray-600 text-sm">Regulators review and approve equipment requests to ensure fair distribution.</p>
+        </div>
+      </div>
+
+      <div className="hidden md:block md:w-[calc(50%-24px)] text-right"></div>
+      <div className="hidden md:flex w-16 h-16 rounded-full bg-[#f0eeff] items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+        3
+      </div>
+      <div className="hidden md:block md:w-[calc(50%-24px)] text-left">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">Regulator Approves</h3>
+        <p className="text-gray-600">Regulators review and approve equipment requests to ensure fair distribution.</p>
+      </div>
+    </div>
+
+    {/* Step 4 */}
+    <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
+      <div className="flex md:hidden items-start gap-4">
+        <div className="w-16 h-16 rounded-full bg-[#efffef] flex items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+          4
+        </div>
+        <div>
+          <h3 className="text-lg font-semibold text-gray-800 mb-1">Equipment Delivered</h3>
+          <p className="text-gray-600 text-sm">Once approved, equipment is delivered to the requesting school.</p>
+        </div>
+      </div>
+
+      <div className="hidden md:block md:w-[calc(50%-24px)] text-right">
+        <h3 className="text-xl font-semibold text-gray-800 mb-2">Equipment Delivered</h3>
+        <p className="text-gray-600">Once approved, equipment is delivered to the requesting school.</p>
+      </div>
+      <div className="hidden md:flex w-16 h-16 rounded-full bg-[#efffef] items-center justify-center text-2xl font-bold shadow-md border-4 border-white z-10">
+        4
+      </div>
+      <div className="hidden md:block md:w-[calc(50%-24px)]"></div>
     </div>
   </div>
-</section>
+
+  {/* Decorative elements */}
+  <div className="absolute -top-4 -left-4 w-16 h-16 bg-[#1e0fbf]/10 rounded-full z-[-1]"></div>
+  <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[#6e11b0]/10 rounded-full z-[-1]"></div>
+</div>
 
 
 
