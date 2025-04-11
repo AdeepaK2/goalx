@@ -5,9 +5,10 @@ import { FiMenu, FiX, FiUser, FiLogOut } from "react-icons/fi";
 interface NavBarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
+  donorName?: string; // Added donor name prop
 }
 
-const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
+const NavBar = ({ activeTab, setActiveTab, donorName = "User" }: NavBarProps) => {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const tabs = [
@@ -15,6 +16,24 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
     { id: "donations", label: "Donations" },
     { id: "requests", label: "Requests" }
   ];
+
+  // Handle logout
+  const handleLogout = async () => {
+    try {
+      // Call logout API endpoint
+      const response = await fetch("/api/auth/logout", {
+        method: "POST",
+        credentials: "include"
+      });
+      
+      if (response.ok) {
+        // Redirect to login page after successful logout
+        window.location.href = "/login";
+      }
+    } catch (error) {
+      console.error("Logout failed:", error);
+    }
+  };
 
   return (
     <nav className="bg-white shadow-sm">
@@ -51,12 +70,11 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
             </div>
           </div>
 
-          {/* School Logo and User Section */}
+          {/* User Section */}
           <div className="hidden md:flex items-center">
             <div className="flex items-center pr-4 border-r border-gray-200">
-              
               <span className="ml-2 text-gray-700 font-medium">
-                User Name
+                {donorName}
               </span>
             </div>
 
@@ -70,7 +88,10 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                 </button>
               </div>
               <div className="ml-4">
-                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                <button 
+                  onClick={handleLogout}
+                  className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
                   <FiLogOut className="mr-2" /> Logout
                 </button>
               </div>
@@ -126,10 +147,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
               <div className="ml-3">
                 <div className="text-base font-medium text-gray-800">
-                  Admin User
-                </div>
-                <div className="text-sm font-medium text-gray-500">
-                  admin@centralhs.edu
+                  {donorName}
                 </div>
               </div>
             </div>
@@ -137,10 +155,10 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
                 Profile
               </button>
-              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
-                Settings
-              </button>
-              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
+              <button 
+                onClick={handleLogout}
+                className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
+              >
                 Logout
               </button>
             </div>
