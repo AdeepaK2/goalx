@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Donation from '@/model/donationSchema';
+import '../../../model/schoolSchema';
+import '../../../model/donorSchema';
+import Donation from '../../../model/donationSchema';
 import mongoose from 'mongoose';
 import { ensureConnection } from '@/utils/connectionManager';
 
@@ -21,14 +23,32 @@ export async function GET(request: NextRequest) {
     const maxAmount = searchParams.get('maxAmount');
     const startDate = searchParams.get('startDate');
     const endDate = searchParams.get('endDate');
+    
+    // Check for skip populate header (our fallback mechanism)
+    const skipPopulate = request.headers.get('x-skip-populate') === 'true';
 
     // If ID is provided, fetch specific donation
     if (id) {
-      const donation = await Donation.findOne({ 
-        $or: [{ _id: id }, { donationId: id }] 
-      })
-      .populate('donor', 'displayName donorId donorType')
-      .populate('recipient', 'name schoolId');
+      let donation;
+      
+      if (skipPopulate) {
+        donation = await Donation.findOne({ 
+          $or: [{ _id: id }, { donationId: id }] 
+        });
+      } else {
+        try {
+          donation = await Donation.findOne({ 
+            $or: [{ _id: id }, { donationId: id }] 
+          })
+          .populate('donor', 'displayName donorId donorType')
+          .populate('recipient', 'name schoolId');
+        } catch (err) {
+          // Fallback if populate fails
+          donation = await Donation.findOne({ 
+            $or: [{ _id: id }, { donationId: id }] 
+          });
+        }
+      }
       
       if (!donation) {
         return new NextResponse(JSON.stringify({ error: 'Donation not found' }), {
@@ -72,14 +92,27 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    const donations = await Donation.find(query)
-      .populate('donor', 'displayName donorId donorType')
-      .populate('recipient', 'name schoolId')
-      .skip(skip)
-      .limit(limit)
-      .sort({ createdAt: -1 });
+    let donations;
+    let total;
     
-    const total = await Donation.countDocuments(query);
+    // Skip population if the header is set or try/catch to handle populating error
+    try {
+      donations = await Donation.find(query)
+        .populate('donor', 'displayName donorId donorType')
+        .populate('recipient', 'name schoolId')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    } catch (populationError) {
+      console.error('Population error:', populationError);
+      // Fallback to non-populated results
+      donations = await Donation.find(query)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    }
+    
+    total = await Donation.countDocuments(query);
 
     return new NextResponse(JSON.stringify({
       donations,
