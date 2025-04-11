@@ -12,7 +12,8 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <FiHome size={20} /> },
     { id: "donations", label: "My Donations", icon: <FiDollarSign size={20} /> },
-    { id: "schools", label: "Schools in Need", icon: <HiOutlineAcademicCap size={20} /> }
+    { id: "schools", label: "Schools in Need", icon: <HiOutlineAcademicCap size={20} /> },
+    { id: "profile", label: "My Profile", icon: <FiUser size={20} /> }
   ];
 
   const handleLogout = async () => {

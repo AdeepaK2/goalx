@@ -9,7 +9,7 @@
     "lint": "next lint"
   },
   "dependencies": {
-    "@aws-sdk/client-s3": "^3.782.0",
+    "@aws-sdk/client-s3": "^3.787.0",
     "@google/generative-ai": "^0.24.0",
     "@heroicons/react": "^2.2.0",
     "@radix-ui/react-accordion": "^1.2.4",
