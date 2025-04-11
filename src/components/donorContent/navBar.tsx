@@ -62,10 +62,36 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
                 {donorName}
               </span>
             </div>
+<<<<<<< HEAD
             
             <button 
               onClick={handleLogout}
               className="ml-6 bg-white p-1 rounded-full text-gray-400 hover:text-gray-500 focus:outline-none"
+=======
+
+            <div className="flex items-center ml-4">
+              <div className="relative">
+                <button className="flex text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"  onClick={() => setActiveTab("profile")}>
+                  <span className="sr-only">Open user menu</span>
+                  <div className="h-8 w-8 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                    <FiUser />
+                  </div>
+                </button>
+              </div>
+              <div className="ml-4">
+                <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+                  <FiLogOut className="mr-2" /> Logout
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Mobile menu button */}
+          <div className="flex items-center md:hidden">
+            <button
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+              className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-inset focus:ring-blue-500"
+>>>>>>> 00acb78891bffb9763f8e4fd6ce22cbee14a1fc8
             >
               <FiLogOut className="h-6 w-6" />
             </button>
@@ -98,6 +124,7 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
       </div>
       
       {/* Mobile menu */}
+<<<<<<< HEAD
       <div className="hidden md:hidden">
         <div className="pt-2 pb-3 space-y-1">
           {navItems.map((item) => (
@@ -113,6 +140,53 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
               {item.label}
             </button>
           ))}
+=======
+      {mobileMenuOpen && (
+        <div className="md:hidden">
+          <div className="pt-2 pb-3 space-y-1">
+            {tabs.map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => {
+                  setActiveTab(tab.id);
+                  setMobileMenuOpen(false);
+                }}
+                className={`block w-full text-left pl-3 pr-4 py-2 border-l-4 text-base font-medium ${
+                  activeTab === tab.id
+                    ? "border-indigo-500 bg-indigo-50 text-indigo-700"
+                    : "border-transparent text-gray-500 hover:bg-gray-50 hover:border-gray-300 hover:text-gray-700"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+          <div className="pt-4 pb-3 border-t border-gray-200">
+            <div className="flex items-center px-4">
+              <div className="flex-shrink-0">
+                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-600">
+                  <FiUser className="h-5 w-5" />
+                </div>
+              </div>
+              <div className="ml-3">
+                <div className="text-base font-medium text-gray-800">
+                  Admin User
+                </div>
+                <div className="text-sm font-medium text-gray-500">
+                  admin@centralhs.edu
+                </div>
+              </div>
+            </div>
+            <div className="mt-3 space-y-1">
+              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100" onClick={() => setActiveTab("profile")}>
+                Profile
+              </button>
+              <button className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100">
+                Logout
+              </button>
+            </div>
+          </div>
+>>>>>>> 00acb78891bffb9763f8e4fd6ce22cbee14a1fc8
         </div>
       </div>
     </header>

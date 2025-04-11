@@ -171,9 +171,10 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                       }}
                     />
                   ) : (
-                    <div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600">
+                    <button onClick={() => setActiveTab("profile")}><div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 cursor-pointer">
                       {schoolData?.name ? getInitials(schoolData.name) : <FiUser className="h-6 w-6" />}
-                    </div>
+                    </div></button>
+                    
                   )}
                   <span className="ml-2 text-gray-700 font-medium">
                     {schoolData?.name || "School"}
@@ -251,6 +252,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             ) : (
               <div className="flex items-center px-4">
+                <button onClick={() => setActiveTab("profile")} className="flex items-center">
                 <div className="flex-shrink-0">
                   {schoolData?.profilePicture ? (
                     <Image
@@ -271,6 +273,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
                     </div>
                   )}
                 </div>
+                </button>
                 <div className="ml-3">
                   <div className="text-base font-medium text-gray-800">
                     {schoolData?.name || "School"}

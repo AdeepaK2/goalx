@@ -4,6 +4,7 @@ import { FiPlus, FiAward, FiBox, FiCheckCircle, FiLoader } from "react-icons/fi"
 // Define props type
 interface DashboardProps {
   setActiveTab: (tab: string) => void;
+  onReportAchievementClick: () => void; // Add prop for the click handler
 }
 
 // Define types for API data
@@ -42,8 +43,11 @@ interface Achievement {
   colorScheme: string;
 }
 
-// Add setActiveTab to the component props
-const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
+// Add setActiveTab and onReportAchievementClick to the component props
+const Dashboard: React.FC<DashboardProps> = ({
+  setActiveTab,
+  onReportAchievementClick, // Destructure the new prop
+}) => {
   // State for API data
   const [itemsRequestedData, setItemsRequestedData] = useState<RequestItem[]>([]);
   const [itemsBorrowedData, setItemsBorrowedData] = useState<BorrowedItem[]>([]);
@@ -53,12 +57,13 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
     borrowals: true,
     achievements: true
   });
-  const [error, setError] = useState({
+  const [error, setError] = useState<{ requests: string | null, borrowals: string | null, achievements: string | null }>({
     requests: null,
     borrowals: null,
     achievements: null
   });
   const [schoolInfo, setSchoolInfo] = useState<{id?: string, name?: string}>({});
+
 
   // Fetch data on component mount
   useEffect(() => {
@@ -82,9 +87,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         setLoading(prev => ({ ...prev, requests: true }));
         const response = await fetch(`/api/equipment/request?school=${schoolId}&limit=4`);
         if (!response.ok) throw new Error('Failed to fetch requests');
-        
+
         const data = await response.json();
-        
+
         // Transform the data to match our component's expected format
         const formattedRequests = data.equipmentRequests.map((req: any) => ({
           _id: req._id,
@@ -93,7 +98,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
           status: req.status,
           requestDate: new Date(req.createdAt).toISOString().split('T')[0]
         }));
-        
+
         setItemsRequestedData(formattedRequests);
       } catch (err: any) {
         console.error('Error fetching requests:', err);
@@ -109,9 +114,9 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         setLoading(prev => ({ ...prev, borrowals: true }));
         const response = await fetch(`/api/equipment/transaction?recipient=${schoolId}&status=approved&transactionType=rental&limit=4`);
         if (!response.ok) throw new Error('Failed to fetch borrowals');
-        
+
         const data = await response.json();
-        
+
         // Transform the data to match our component's expected format
         const formattedBorrowals = data.transactions.map((txn: any) => ({
           _id: txn._id,
@@ -120,7 +125,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
           dueDate: txn.rentalDetails?.returnDueDate ? new Date(txn.rentalDetails.returnDueDate).toISOString().split('T')[0] : 'Unknown',
           borrowedDate: txn.rentalDetails?.startDate ? new Date(txn.rentalDetails.startDate).toISOString().split('T')[0] : 'Unknown'
         }));
-        
+
         setItemsBorrowedData(formattedBorrowals);
       } catch (err: any) {
         console.error('Error fetching borrowals:', err);
@@ -137,25 +142,25 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
         // Get plays associated with the school first
         const playsResponse = await fetch(`/api/play?school=${schoolId}`);
         if (!playsResponse.ok) throw new Error('Failed to fetch school plays');
-        
+
         const playsData = await playsResponse.json();
         if (!playsData.plays || playsData.plays.length === 0) {
           setAchievementsData([]);
           setLoading(prev => ({ ...prev, achievements: false }));
           return;
         }
-        
+
         // Get play IDs
         const playIds = playsData.plays.map((play: any) => play._id);
-        
+
         // For each play ID, fetch achievements
-        const achievementPromises = playIds.map((playId: string) => 
+        const achievementPromises = playIds.map((playId: string) =>
           fetch(`/api/achievement?play=${playId}`)
             .then(res => res.ok ? res.json() : {achievements: []})
         );
-        
+
         const achievementResults = await Promise.all(achievementPromises);
-        
+
         // Combine and flatten all achievements
         const allAchievements = achievementResults
           .flatMap(result => result.achievements || [])
@@ -178,7 +183,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
             date: new Date(achievement.createdAt).toLocaleDateString('en-US', {month: 'short', day: 'numeric', year: 'numeric'}),
             colorScheme: ['purple', 'indigo'][Math.floor(Math.random() * 2)],
           }));
-        
+
         setAchievementsData(allAchievements);
       } catch (err: any) {
         console.error('Error fetching achievements:', err);
@@ -210,7 +215,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
   );
 
   // Error state component
-  const ErrorState = ({ message }: { message: string }) => (
+  const ErrorState = ({ message }: { message: string | null }) => (
     <div className="p-4 border border-red-200 rounded bg-red-50 text-red-700 text-center">
       Error loading data: {message || "Unknown error"}
     </div>
@@ -439,8 +444,8 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab }) => {
                 <tr>
                   <td colSpan={4} className="">
                     <div className="flex justify-center py-6">
-                      <button 
-                        onClick={() => setActiveTab("achievements")}
+                      <button
+                        onClick={onReportAchievementClick} // Use the passed handler here
                         className="group w-full px-5 py-2.5 bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] text-sm font-medium rounded-md text-white shadow-md hover:shadow-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#6e11b0] flex items-center justify-center"
                       >
                         <FiPlus className="mr-2 transition-transform group-hover:rotate-90" />

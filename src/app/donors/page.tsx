@@ -3,7 +3,12 @@ import React, { useState, useEffect } from "react";
 import NavBar from "@/components/donorContent/navBar";
 import Dashboard from "@/components/donorContent/dashboard";
 import Donations from "@/components/donorContent/donations";
+<<<<<<< HEAD
 import SchoolNeeds from "@/components/donorContent/picks";
+=======
+import Requests from "@/components/donorContent/requests";
+import Profile from "@/components/donorContent/profile";
+>>>>>>> 00acb78891bffb9763f8e4fd6ce22cbee14a1fc8
 import Footer from "@/components/schoolContent/footer";
 import { useRouter } from "next/navigation";
 
@@ -121,9 +126,16 @@ const Page = () => {
 
       {/* Main Content Area - conditionally render based on activeTab */}
       <main className="flex-grow">
+<<<<<<< HEAD
         {activeTab === "dashboard" && <Dashboard setActiveTab={setActiveTab} donorData={donorData} />}
         {activeTab === "donations" && donorData && <Donations donorData={donorData} />}
         {activeTab === "schools" && donorData && <SchoolNeeds donorData={donorData} />}
+=======
+        {activeTab === "dashboard" && <Dashboard setActiveTab={setActiveTab} />}
+        {activeTab === "donations" && <Donations />}
+        {activeTab === "requests" && <Requests />}
+        {activeTab === "profile" && <Profile />}
+>>>>>>> 00acb78891bffb9763f8e4fd6ce22cbee14a1fc8
       </main>
 
       <Footer />
