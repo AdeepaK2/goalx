@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Play from '@/model/playSchema';
+import '../../../model/schoolSchema'; // Import school schema
+import '../../../model/sportSchema'; // Import sport schema first
+import Play from '../../../model/playSchema';
 import mongoose from 'mongoose';
 import { ensureConnection } from '@/utils/connectionManager';
 
@@ -48,13 +50,24 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    const plays = await Play.find(query)
-      .populate('school', 'name schoolId')
-      .populate('sport', 'sportName sportId')
-      .skip(skip)
-      .limit(limit)
-      .sort({ lastUpdated: -1 });
-    
+    // Add try/catch for population
+    let plays;
+    try {
+      plays = await Play.find(query)
+        .populate('school', 'name schoolId')
+        .populate('sport', 'sportName sportId')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    } catch (populationError) {
+      console.error('Population error:', populationError);
+      // Fallback to non-populated results
+      plays = await Play.find(query)
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    }
+
     const total = await Play.countDocuments(query);
 
     return new NextResponse(JSON.stringify({

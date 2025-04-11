@@ -2,6 +2,65 @@ import React, { useState, useEffect } from "react";
 import { FiBox, FiX } from "react-icons/fi";
 import { FaPlus } from "react-icons/fa";
 
+// Football goal animation component
+const GoalAnimation = () => {
+  // Confetti pieces
+  const confettiColors = ['#ff718d', '#fdff6a', '#ffcf4b', '#f0fff8', '#90d5ec', '#a6c1ee'];
+  const confettiCount = 50;
+  
+  return (
+    <div className="flex flex-col items-center justify-center py-8 relative">
+      {/* Confetti elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        {Array.from({ length: confettiCount }).map((_, i) => {
+          const size = Math.random() * 10 + 5; // 5-15px
+          const color = confettiColors[Math.floor(Math.random() * confettiColors.length)];
+          const left = `${Math.random() * 100}%`;
+          const animationDuration = `${Math.random() * 3 + 2}s`;
+          const animationDelay = `${Math.random() * 0.5}s`;
+          
+          return (
+            <div 
+              key={i}
+              className="absolute rounded-sm animate-confetti"
+              style={{
+                width: `${size}px`,
+                height: `${size * 0.4}px`,
+                backgroundColor: color,
+                left: left,
+                top: '-20px',
+                animationDuration,
+                animationDelay,
+                transform: `rotate(${Math.random() * 360}deg)`
+              }}
+            />
+          );
+        })}
+      </div>
+      
+      {/* Bouncing football */}
+      <div className="animate-bounce w-16 h-16 bg-white rounded-full flex items-center justify-center shadow-lg">
+        <div className="w-14 h-14 bg-gray-800 rounded-full relative">
+          {/* Football pattern */}
+          <div className="absolute inset-0 rounded-full overflow-hidden">
+            <div className="absolute top-1/2 left-0 right-0 h-[2px] bg-white"></div>
+            <div className="absolute top-1/4 left-0 right-0 h-[1px] bg-white/60"></div>
+            <div className="absolute top-3/4 left-0 right-0 h-[1px] bg-white/60"></div>
+            <div className="absolute left-1/2 top-0 bottom-0 w-[2px] bg-white"></div>
+            <div className="absolute left-1/4 top-0 bottom-0 w-[1px] bg-white/60"></div>
+            <div className="absolute left-3/4 top-0 bottom-0 w-[1px] bg-white/60"></div>
+          </div>
+        </div>
+      </div>
+      
+      <div className="text-center mt-6">
+        <p className="text-2xl font-bold text-green-600">GOAL!</p>
+        <p className="text-lg text-green-500">Thank you for your donation!</p>
+      </div>
+    </div>
+  );
+};
+
 interface DonorData {
     id: string;
     donorId: string;
@@ -10,7 +69,7 @@ interface DonorData {
     donorType: string;
 }
 
-// Update the DonationItem interface to better match the API response
+// Update the DonationItem interface to include schoolName
 interface DonationItem {
     id: string;
     donationId: string;
@@ -23,28 +82,37 @@ interface DonationItem {
     itemName?: string;
     quantity?: number;
     purpose?: string;
+    schoolName?: string; // Added school name
 }
 
 interface DonationsProps {
     donorData: DonorData;
 }
 
-// Donation form component
-const DonationForm = ({ onClose, donorData }: { onClose: () => void, donorData: DonorData }) => {
+// Update the DonationForm component props
+const DonationForm = ({ 
+  onClose, 
+  donorData, 
+  preselectedSchool 
+}: { 
+  onClose: () => void, 
+  donorData: DonorData, 
+  preselectedSchool?: {id: string, name: string} | null 
+}) => {
     const [donationType, setDonationType] = useState<'MONETARY' | 'EQUIPMENT' | 'OTHER'>('MONETARY');
     const [amount, setAmount] = useState<string>('');
     const [currency, setCurrency] = useState<string>('LKR');
-    const [paymentMethod, setPaymentMethod] = useState<string>('BANK_TRANSFER');
+    const [paymentMethod, setPaymentMethod] = useState<string>('CREDIT_CARD');
     const [itemName, setItemName] = useState<string>('');
     const [description, setDescription] = useState<string>('');
     const [quantity, setQuantity] = useState<string>('1');
-    const [school, setSchool] = useState<string>('');
+    const [school, setSchool] = useState<string>(preselectedSchool?.id || '');
     const [schools, setSchools] = useState<{id: string, name: string}[]>([]);
     const [loading, setLoading] = useState<boolean>(false);
     const [error, setError] = useState<string | null>(null);
     const [success, setSuccess] = useState<boolean>(false);
 
-    // Fetch schools on component mount
+    // Modify the useEffect to handle preselected schools
     useEffect(() => {
         const fetchSchools = async () => {
             try {
@@ -62,7 +130,12 @@ const DonationForm = ({ onClose, donorData }: { onClose: () => void, donorData: 
         };
 
         fetchSchools();
-    }, []);
+        
+        // If preselectedSchool is provided, set it
+        if (preselectedSchool?.id) {
+            setSchool(preselectedSchool.id);
+        }
+    }, [preselectedSchool]);
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -89,7 +162,8 @@ const DonationForm = ({ onClose, donorData }: { onClose: () => void, donorData: 
                 recipient: school,
                 donationType,
                 purpose: description || 'General donation',
-                anonymous: false
+                anonymous: false,
+                status: 'completed' // Set status to completed immediately
             };
 
             // Add type-specific details
@@ -151,8 +225,7 @@ const DonationForm = ({ onClose, donorData }: { onClose: () => void, donorData: 
 
             {success ? (
                 <div className="bg-green-50 p-4 rounded-md mb-4 text-center">
-                    <p className="text-green-800 font-medium">Donation submitted successfully!</p>
-                    <p className="text-green-600 text-sm mt-1">Thank you for your contribution.</p>
+                    <GoalAnimation />
                 </div>
             ) : (
                 <form onSubmit={handleSubmit}>
@@ -241,17 +314,17 @@ const DonationForm = ({ onClose, donorData }: { onClose: () => void, donorData: 
                                 <label className="block text-sm font-medium text-gray-700 mb-1">
                                     Payment Method
                                 </label>
-                                <select
-                                    className="w-full p-2 border border-gray-300 rounded-md"
-                                    value={paymentMethod}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                >
-                                    <option value="BANK_TRANSFER">Bank Transfer</option>
-                                    <option value="CREDIT_CARD">Credit Card</option>
-                                    <option value="MOBILE_PAYMENT">Mobile Payment</option>
-                                    <option value="CASH">Cash</option>
-                                    <option value="OTHER">Other</option>
-                                </select>
+                                <div className="w-full p-2 border border-gray-300 rounded-md bg-gray-50">
+                                    Credit Card
+                                    <input 
+                                        type="hidden" 
+                                        name="paymentMethod" 
+                                        value="CREDIT_CARD" 
+                                    />
+                                </div>
+                                <p className="text-xs text-gray-500 mt-1">
+                                    Only credit card payments are currently supported.
+                                </p>
                             </div>
                         </>
                     ) : (
@@ -353,6 +426,17 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                         name = `${itemInfo.itemName} (${itemInfo.quantity || 1} units)`;
                     }
                     
+                    // Extract school name from populated recipient data
+                    let schoolName = "Unknown School";
+                    if (donation.recipient) {
+                        if (typeof donation.recipient === 'object' && donation.recipient.name) {
+                            schoolName = donation.recipient.name;
+                        } else if (typeof donation.recipient === 'string') {
+                            // When not populated, we still have the ID
+                            schoolName = "School #" + donation.recipient.substring(0, 6);
+                        }
+                    }
+                    
                     return {
                         id: donation._id,
                         donationId: donation.donationId || donation._id,
@@ -364,7 +448,8 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                         currency: donation.monetaryDetails?.currency,
                         itemName: donation.itemDetails?.[0]?.itemName,
                         quantity: donation.itemDetails?.[0]?.quantity,
-                        purpose: donation.purpose
+                        purpose: donation.purpose,
+                        schoolName: schoolName // Use the extracted school name
                     };
                 });
                 
@@ -395,7 +480,8 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                             currency: donation.monetaryDetails?.currency,
                             itemName: donation.itemDetails?.[0]?.itemName,
                             quantity: donation.itemDetails?.[0]?.quantity,
-                            purpose: donation.purpose
+                            purpose: donation.purpose,
+                            schoolName: donation.schoolName // Added schoolName
                         }));
                         
                         setItemsRequestedData(simpleMappedDonations || []);
@@ -478,6 +564,9 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                                                 {item.donationType === 'MONETARY' ? 'Money Donation' : 
                                                  item.donationType === 'EQUIPMENT' ? 'Equipment Donation' : 'Other Donation'}
                                             </span>
+                                            <span className="text-gray-600 text-sm font-medium">
+                                                School: {item.schoolName || "Unknown School"}
+                                            </span>
                                             <span className="text-gray-500 text-sm">Date: {item.requestDate}</span>
                                         </div>
                                         <div className="mt-2 md:mt-0 md:ml-4 flex items-center">
@@ -521,3 +610,4 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
 };
 
 export default Donations;
+export { DonationForm };

@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
-import Donation from '@/model/donationSchema';
+import '../../../model/schoolSchema';
+import '../../../model/donorSchema';
+import Donation from '../../../model/donationSchema';
 import mongoose from 'mongoose';
 import { ensureConnection } from '@/utils/connectionManager';
 
@@ -95,31 +97,22 @@ export async function GET(request: NextRequest) {
     
     // Skip population if the header is set or try/catch to handle populating error
     try {
-      if (skipPopulate) {
-        donations = await Donation.find(query)
-          .skip(skip)
-          .limit(limit)
-          .sort({ createdAt: -1 });
-      } else {
-        donations = await Donation.find(query)
-          .populate('donor', 'displayName donorId donorType')
-          .populate('recipient', 'name schoolId')
-          .skip(skip)
-          .limit(limit)
-          .sort({ createdAt: -1 });
-      }
-      
-      total = await Donation.countDocuments(query);
-    } catch (populateError) {
-      // If populate fails, try without it
-      console.error("Population error:", populateError);
+      donations = await Donation.find(query)
+        .populate('donor', 'displayName donorId donorType')
+        .populate('recipient', 'name schoolId')
+        .skip(skip)
+        .limit(limit)
+        .sort({ createdAt: -1 });
+    } catch (populationError) {
+      console.error('Population error:', populationError);
+      // Fallback to non-populated results
       donations = await Donation.find(query)
         .skip(skip)
         .limit(limit)
         .sort({ createdAt: -1 });
-      
-      total = await Donation.countDocuments(query);
     }
+    
+    total = await Donation.countDocuments(query);
 
     return new NextResponse(JSON.stringify({
       donations,

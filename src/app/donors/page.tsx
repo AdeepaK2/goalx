@@ -3,7 +3,7 @@ import React, { useState, useEffect } from "react";
 import NavBar from "@/components/donorContent/navBar";
 import Dashboard from "@/components/donorContent/dashboard";
 import Donations from "@/components/donorContent/donations";
-import Requests from "@/components/donorContent/picks";
+import SchoolNeeds from "@/components/donorContent/picks";
 import Footer from "@/components/schoolContent/footer";
 import { useRouter } from "next/navigation";
 
@@ -13,14 +13,14 @@ interface DonorData {
   name: string;
   email: string;
   donorType: string;
-}
-
-interface RequestsProps {
-  donorData: DonorData | null;
+  location?: {
+    district?: string;
+    province?: string;
+  };
 }
 
 const Page = () => {
-  const [activeTab, setActiveTab] = useState("dashboard"); // Default active tab
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [donorData, setDonorData] = useState<DonorData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +45,20 @@ const Page = () => {
         }
 
         const data = await response.json();
+        
+        // Enhance with location data if available
+        try {
+          const donorResponse = await fetch(`/api/donor?id=${data.id}`);
+          if (donorResponse.ok) {
+            const donorDetails = await donorResponse.json();
+            if (donorDetails.location) {
+              data.location = donorDetails.location;
+            }
+          }
+        } catch (locErr) {
+          console.warn("Could not fetch donor location details:", locErr);
+        }
+        
         setDonorData(data);
       } catch (err) {
         setError(err instanceof Error ? err.message : "Failed to fetch donor data");
@@ -61,7 +75,7 @@ const Page = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <NavBar activeTab={activeTab} setActiveTab={setActiveTab} donorName={donorData?.name || "Donor"} />
         <div className="flex-grow flex items-center justify-center">
           <div className="p-6 text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
@@ -77,7 +91,7 @@ const Page = () => {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <NavBar activeTab={activeTab} setActiveTab={setActiveTab} />
+        <NavBar activeTab={activeTab} setActiveTab={setActiveTab} donorName={donorData?.name || "Donor"} />
         <div className="flex-grow flex items-center justify-center">
           <div className="p-6 text-center max-w-md">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
@@ -109,6 +123,7 @@ const Page = () => {
       <main className="flex-grow">
         {activeTab === "dashboard" && <Dashboard setActiveTab={setActiveTab} donorData={donorData} />}
         {activeTab === "donations" && donorData && <Donations donorData={donorData} />}
+        {activeTab === "schools" && donorData && <SchoolNeeds donorData={donorData} />}
       </main>
 
       <Footer />

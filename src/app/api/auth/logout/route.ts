@@ -25,18 +25,3 @@ export async function POST(request: NextRequest) {
     });
   }
 }
-
-export const handleLogout = async () => {
-  try {
-    const response = await fetch("/api/auth/logout", {
-      method: "POST",
-      credentials: "include"
-    });
-    
-    if (response.ok) {
-      window.location.href = "/login";
-    }
-  } catch (error) {
-    console.error("Logout failed:", error);
-  }
-};
