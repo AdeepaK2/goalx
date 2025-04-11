@@ -7,7 +7,7 @@ import { ThemeProvider } from '@/components/governBody/providers/ThemeProvider';
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'Sports Admin Dashboard',
+  title: 'Govern Body Dashboard',
   description: 'Administrative dashboard for sports governing body',
 };
 
