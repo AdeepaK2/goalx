@@ -11,34 +11,7 @@ export default function AboutPage() {
     <>
       <Header />
       <main className="bg-white">
-        {/* Hero Section */}
-        <section className="w-full bg-gradient-to-b from-white to-gray-50 py-16 md:py-24">
-          <div className="max-w-7xl mx-auto px-2 md:px-4">
-            <div className="flex flex-col md:flex-row items-center gap-12">
-              <div className="w-full md:w-1/2">
-                <h1 className="text-4xl md:text-5xl font-bold text-gray-800 mb-6">About GoalX</h1>
-                <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-                  We're on a mission to make sports equipment accessible to all schools through our innovative sharing platform.
-                </p>
-              </div>
-              <div className="w-full md:w-1/2 relative">
-                <div className="rounded-2xl overflow-hidden shadow-xl h-[400px] relative">
-                  <Image 
-                    src="/images/carousel-1.jpeg" 
-                    alt="About GoalX" 
-                    fill
-                    className="object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent"></div>
-                </div>
-                {/* Decorative elements */}
-                <div className="absolute -bottom-4 -right-4 w-24 h-24 bg-[#6e11b0]/10 rounded-full z-[-1]"></div>
-                <div className="absolute -top-4 -left-4 w-16 h-16 bg-[#1e0fbf]/10 rounded-full z-[-1]"></div>
-              </div>
-            </div>
-          </div>
-        </section>
-
+       
         {/* Our Story Section */}
         <section className="w-full py-16 md:py-24">
           <div className="max-w-7xl mx-auto px-2 md:px-4">
@@ -46,7 +19,7 @@ export default function AboutPage() {
               <div className="w-full md:w-1/2 relative order-2 md:order-1">
                 <div className="rounded-2xl overflow-hidden shadow-xl h-[400px] relative">
                   <Image 
-                    src="/images/carousel-2.jpeg" 
+                    src="/images/about-1.jpeg" 
                     alt="Our Story" 
                     fill
                     className="object-cover"
@@ -143,7 +116,7 @@ export default function AboutPage() {
               <div className="w-full md:w-1/2 relative">
                 <div className="rounded-2xl overflow-hidden shadow-xl h-[400px] relative">
                   <Image 
-                    src="/images/carousel-3.jpeg" 
+                    src="/images/about-2.jpeg" 
                     alt="Our Mission" 
                     fill
                     className="object-cover"
