@@ -5,6 +5,7 @@ import Image from 'next/image';
 import SchoolRegister from '@/components/register/schoolRegister';
 import DonorRegister from '@/components/register/donorRegister';
 import GoverBodyRegister from '@/components/register/goverBodyRegister';
+import Link from 'next/link';
 
 const RegisterPage = () => {
   // State to track which tab is active
@@ -14,6 +15,20 @@ const RegisterPage = () => {
     <div className="min-h-screen bg-gray-50">
       {/* Header with logo */}
       <header className="pt-6 pb-4 flex justify-center">
+      <div className="w-full flex justify-center relative mb-2">
+        {/* Home button in top right */}
+        <div className="absolute top-0 right-4">
+          <Link 
+            href="/" 
+            className="px-4 py-1.5 bg-white text-[#1e0fbf] border border-[#1e0fbf] rounded-full 
+                     hover:bg-gray-50 transition-colors text-xs font-medium flex items-center"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Home
+          </Link>
+        </div>
         <div className="w-32 h-16 relative">
           <Image
             src="/logo.png"
@@ -23,6 +38,7 @@ const RegisterPage = () => {
             priority
           />
         </div>
+      </div>
       </header>
       
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
