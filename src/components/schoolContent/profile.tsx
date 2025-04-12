@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from "react";
-import { FiMapPin, FiMail, FiPhone, FiUser, FiHash, FiCompass } from "react-icons/fi";
+import { FiMapPin, FiMail, FiPhone, FiUser, FiHash, FiCompass, FiLoader } from "react-icons/fi";
+import { toast } from "react-hot-toast";
 
 // Define the structure of school data
 interface SchoolLocation {
@@ -18,8 +19,9 @@ interface SchoolContact {
 }
 
 interface School {
+    id?: string;
     schoolId: string;
-    sid: number;
+    sid?: number;
     name: string;
     location: SchoolLocation;
     contact: SchoolContact;
@@ -27,39 +29,72 @@ interface School {
     verified: boolean;
 }
 
-
-// Mock data - replace with actual data fetching in a real application
-const initialSchoolData: School = {
-    schoolId: "s123",
-    sid: 789,
-    name: "Example High School",
-    location: {
-        district: "Colombo",
-        zonal: "Colombo Central",
-        province: "Western",
-        coordinates: {
-            latitude: 6.9271,
-            longitude: 79.8612,
-        },
-    },
-    contact: {
-        email: "principal@examplehigh.edu.lk",
-        phone: "011-2345678",
-    },
-    principalName: "Mr. Silva",
-    verified: true,
-};
-
 const Profile = () => {
-    const [schoolData, setSchoolData] = useState<School>(initialSchoolData);
+    const [schoolData, setSchoolData] = useState<School | null>(null);
     const [isDirty, setIsDirty] = useState(false);
+    const [isLoading, setIsLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);
+    const [isSaving, setIsSaving] = useState(false);
+
+    // Fetch school data on component mount
+    useEffect(() => {
+        const fetchSchoolData = async () => {
+            try {
+                setIsLoading(true);
+                const response = await fetch('/api/school/profile');
+                
+                if (!response.ok) {
+                    throw new Error(`Error fetching school data: ${response.statusText}`);
+                }
+                
+                const data = await response.json();
+                
+                // Transform API response to match our School interface
+                setSchoolData({
+                    id: data.id || data._id,
+                    schoolId: data.schoolId,
+                    sid: data.sid,
+                    name: data.name,
+                    location: {
+                        district: data.location?.district || '',
+                        zonal: data.location?.zonal || '',
+                        province: data.location?.province || '',
+                        coordinates: {
+                            latitude: data.location?.coordinates?.latitude || 0,
+                            longitude: data.location?.coordinates?.longitude || 0
+                        }
+                    },
+                    contact: {
+                        email: data.contact?.email || '',
+                        phone: data.contact?.phone || ''
+                    },
+                    principalName: data.principalName || '',
+                    verified: data.verified || false
+                });
+                
+                setError(null);
+            } catch (err) {
+                console.error('Error fetching school data:', err);
+                setError(err instanceof Error ? err.message : 'Failed to load school data');
+                toast.error('Failed to load school profile');
+            } finally {
+                setIsLoading(false);
+            }
+        };
+
+        fetchSchoolData();
+    }, []);
 
     // Function to handle input changes and update nested state
     const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!schoolData) return;
+        
         const { name, value } = e.target;
         const keys = name.split('.'); // Handle nested properties like 'location.district'
 
         setSchoolData(prevData => {
+            if (!prevData) return null;
+            
             let updatedData = { ...prevData };
             let currentLevel: any = updatedData;
 
@@ -75,33 +110,81 @@ const Profile = () => {
                  currentLevel[keys[keys.length - 1]] = value;
             }
 
-
             return updatedData;
         });
 
         setIsDirty(true); // Mark as dirty whenever a change occurs
     };
 
-     // Function to handle the update action
-     const handleUpdate = async () => {
-        console.log("Updating school data:", schoolData);
+    // Function to handle the update action
+    const handleUpdate = async () => {
+        if (!schoolData) return;
         
-         alert("Update logic needs to be implemented (e.g., API call). Check console for data.");
-         setIsDirty(false); // For demonstration, reset dirty state
+        try {
+            setIsSaving(true);
+            
+            const response = await fetch('/api/school/profile', {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(schoolData)
+            });
+            
+            if (!response.ok) {
+                throw new Error(`Error updating profile: ${response.statusText}`);
+            }
+            
+            const result = await response.json();
+            toast.success('Profile updated successfully');
+            setIsDirty(false);
+        } catch (err) {
+            console.error('Error updating school profile:', err);
+            toast.error(err instanceof Error ? err.message : 'Failed to update profile');
+        } finally {
+            setIsSaving(false);
+        }
     };
-
 
     // Basic input styling
     const inputStyle = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-700";
+
+    // Show loading state
+    if (isLoading) {
+        return (
+            <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center">
+                <FiLoader className="animate-spin text-indigo-600 h-12 w-12 mb-4" />
+                <p className="text-gray-600">Loading school profile...</p>
+            </div>
+        );
+    }
+
+    // Show error state
+    if (error || !schoolData) {
+        return (
+            <div className="bg-gray-50 min-h-screen flex flex-col items-center justify-center p-4">
+                <div className="bg-white p-6 rounded-lg shadow-md max-w-md w-full text-center">
+                    <div className="text-red-500 text-xl mb-4">⚠️</div>
+                    <h2 className="text-xl font-semibold text-gray-800 mb-2">Error Loading Profile</h2>
+                    <p className="text-gray-600 mb-4">{error || "Could not load school data"}</p>
+                    <button 
+                        onClick={() => window.location.reload()}
+                        className="px-4 py-2 bg-indigo-600 text-white rounded hover:bg-indigo-700 transition"
+                    >
+                        Try Again
+                    </button>
+                </div>
+            </div>
+        );
+    }
 
     return (
         <div className="bg-gray-50 min-h-screen">
             {/* Hero Section */}
             <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-4 py-12 sm:px-6 sm:py-16 md:py-24 lg:px-8">
                 <div className="max-w-3xl mx-auto text-center">
-                     {/* School Name is not editable in this version, kept as H1 */}
                     <h1 className="text-3xl font-bold text-white sm:text-4xl md:text-5xl">
-                        {initialSchoolData.name} {/* Display original name */}
+                        {schoolData.name}
                     </h1>
                     <p className="mt-3 text-lg text-blue-100 sm:mt-4 sm:text-xl max-w-xl mx-auto">
                         View and edit your school profile details.
@@ -118,15 +201,14 @@ const Profile = () => {
                          {isDirty && (
                             <button
                                 onClick={handleUpdate}
-                                className="px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                                disabled={isSaving}
+                                className={`px-4 py-2 bg-green-600 text-white text-sm font-medium rounded-md hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500 ${isSaving ? 'opacity-75 cursor-not-allowed' : ''}`}
                             >
-                                Update Profile
+                                {isSaving ? 'Saving...' : 'Update Profile'}
                             </button>
                         )}
                     </div>
-                    <div className="p-4 sm:p-5 space-y-5"> {/* Increased spacing */}
-
-                        
+                    <div className="p-4 sm:p-5 space-y-5">
                         {/* School ID - Read-only */}
                         <div className="flex items-center">
                             <FiHash className="mr-3 flex-shrink-0 text-[#6e11b0]" size={18} />
@@ -148,7 +230,7 @@ const Profile = () => {
                             <input
                                 type="number" // Use number type if SID is always numeric
                                 name="sid"
-                                value={schoolData.sid}
+                                value={schoolData.sid || 0}
                                 readOnly // SID is typically not editable
                                 className={inputStyle + " bg-gray-100 cursor-not-allowed"} // Style for read-only
                                 placeholder="SID"
