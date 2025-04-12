@@ -166,7 +166,7 @@ function VerificationForm() {
                     required
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf] sm:text-sm"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf] sm:text-sm text-black"
                     placeholder={`Enter your ${userType} email address`}
                   />
                 </div>
@@ -186,7 +186,7 @@ function VerificationForm() {
                     maxLength={4}
                     value={code}
                     onChange={(e) => setCode(e.target.value.replace(/[^0-9]/g, '').slice(0, 4))}
-                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-center text-2xl tracking-widest font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf]"
+                    className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm text-center text-2xl tracking-widest font-bold placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf] text-black"
                     placeholder="0000"
                   />
                 </div>

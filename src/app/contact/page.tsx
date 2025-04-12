@@ -181,47 +181,13 @@ export default function ContactPage() {
                   </div>
                 </div>
                 
-                <div className="mt-10">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Connect With Us</h3>
-                  <div className="flex space-x-4">
-                    {['facebook', 'twitter', 'instagram', 'linkedin'].map((social) => (
-                      <a 
-                        key={social}
-                        href={`https://${social}.com/goalx`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e0fbf] to-[#6e11b0] flex items-center justify-center text-white hover:opacity-90 transition-opacity"
-                      >
-                        <span className="sr-only">{social}</span>
-                        {/* Replace with actual social icons */}
-                        {social[0].toUpperCase()}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+            
               </div>
             </div>
           </div>
         </section>
 
-        {/* Map Section */}
-        <section className="w-full py-16 md:py-24 bg-gradient-to-b from-white to-gray-50">
-          <div className="max-w-7xl mx-auto px-2 md:px-4">
-            <div className="text-center max-w-3xl mx-auto mb-12">
-              <h2 className="text-3xl md:text-4xl font-bold text-gray-800 mb-6">Find Us</h2>
-              <p className="text-lg text-gray-600">
-                Visit our office to learn more about how we're transforming sports equipment access for schools.
-              </p>
-            </div>
-            
-            <div className="rounded-xl overflow-hidden shadow-lg h-[400px] relative">
-              {/* Replace with actual map component or embed */}
-              <div className="w-full h-full bg-gray-200 flex items-center justify-center">
-                <p className="text-gray-500 text-lg">Interactive Map Goes Here</p>
-              </div>
-            </div>
-          </div>
-        </section>
+        
 
         {/* FAQ Section */}
         <section className="w-full py-16 md:py-24">
