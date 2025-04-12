@@ -35,7 +35,7 @@ export default function HeroSection() {
             </h1>
 
             <p className="text-lg md:text-xl text-gray-600 leading-relaxed">
-              Connect schools, donors, and regulators to make sports accessible for all students.
+              Connect schools, donors, and governing body to make sports accessible for all students.
             </p>
 
             <div className="pt-4 flex flex-wrap gap-4">

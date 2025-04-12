@@ -24,13 +24,15 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
   const [error, setError] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Update the tabs array to include the new "outgoing" tab
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "requests", label: "Requests" },
     { id: "borrowals", label: "Borrowals" },
+    { id: "outgoing", label: "Outgoing" },
     { id: "donations", label: "Donations" },
     { id: "inquiries", label: "Inquiries" },
-    { id: "achievements", label: "Achievements" },
+    { id: "achievements", label: "Achievements" }
   ];
 
   // Fetch school data on component mount
@@ -156,25 +158,33 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               ) : (
                 <>
                   {schoolData?.profilePicture ? (
-                    <Image
-                      src={`/api/file/download?file=${schoolData.profilePicture}`}
-                      alt={`${schoolData.name} Logo`}
-                      width={40}
-                      height={40}
-                      className="h-10 w-10 rounded-full object-cover"
-                      priority
-                      onError={(e) => {
-                        // Fallback if image fails to load
-                        const target = e.target as HTMLImageElement;
-                        target.onerror = null;
-                        target.src = '/school-placeholder.png';
-                      }}
-                    />
+                    <div 
+                      onClick={() => setActiveTab("profile")}
+                      className={`h-10 w-10 rounded-full cursor-pointer ${activeTab === "profile" ? "ring-2 ring-indigo-500" : ""}`}
+                    >
+                      <Image
+                        src={`/api/file/download?file=${schoolData.profilePicture}`}
+                        alt={`${schoolData.name} Logo`}
+                        width={40}
+                        height={40}
+                        className="h-10 w-10 rounded-full object-cover"
+                        priority
+                        onError={(e) => {
+                          const target = e.target as HTMLImageElement;
+                          target.onerror = null;
+                          target.src = '/school-placeholder.png';
+                        }}
+                      />
+                    </div>
                   ) : (
-                    <button onClick={() => setActiveTab("profile")}><div className="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 cursor-pointer">
-                      {schoolData?.name ? getInitials(schoolData.name) : <FiUser className="h-6 w-6" />}
-                    </div></button>
-                    
+                    <button 
+                      onClick={() => setActiveTab("profile")}
+                      className="focus:outline-none"
+                    >
+                      <div className={`h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 cursor-pointer ${activeTab === "profile" ? "ring-2 ring-indigo-500" : ""}`}>
+                        {schoolData?.name ? getInitials(schoolData.name) : <FiUser className="h-6 w-6" />}
+                      </div>
+                    </button>
                   )}
                   <span className="ml-2 text-gray-700 font-medium">
                     {schoolData?.name || "School"}
@@ -285,6 +295,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             )}
             <div className="mt-3 space-y-1">
+              {/* Remove the Profile button from mobile menu */}
               <button 
                 onClick={handleLogout} 
                 disabled={isLoggingOut}

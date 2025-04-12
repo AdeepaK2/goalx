@@ -181,24 +181,7 @@ export default function ContactPage() {
                   </div>
                 </div>
                 
-                <div className="mt-10">
-                  <h3 className="text-xl font-semibold text-gray-800 mb-4">Connect With Us</h3>
-                  <div className="flex space-x-4">
-                    {['facebook', 'twitter', 'instagram', 'linkedin'].map((social) => (
-                      <a 
-                        key={social}
-                        href={`https://${social}.com/goalx`} 
-                        target="_blank" 
-                        rel="noopener noreferrer"
-                        className="w-10 h-10 rounded-full bg-gradient-to-br from-[#1e0fbf] to-[#6e11b0] flex items-center justify-center text-white hover:opacity-90 transition-opacity"
-                      >
-                        <span className="sr-only">{social}</span>
-                        {/* Replace with actual social icons */}
-                        {social[0].toUpperCase()}
-                      </a>
-                    ))}
-                  </div>
-                </div>
+            
               </div>
             </div>
           </div>
