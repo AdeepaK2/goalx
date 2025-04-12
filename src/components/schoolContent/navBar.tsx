@@ -24,11 +24,12 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
   const [error, setError] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
-  // Remove "profile" from the tabs array
+  // Update the tabs array to include the new "outgoing" tab
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "requests", label: "Requests" },
     { id: "borrowals", label: "Borrowals" },
+    { id: "outgoing", label: "Outgoing" },
     { id: "donations", label: "Donations" },
     { id: "inquiries", label: "Inquiries" },
     { id: "achievements", label: "Achievements" }

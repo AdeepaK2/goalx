@@ -9,6 +9,7 @@ import Achievements from "@/components/schoolContent/achivements";
 import Profile from "@/components/schoolContent/profile";
 import Inquiries from "@/components/schoolContent/Inquiries";
 import Footer from "@/components/schoolContent/footer";
+import Outgoing from "@/components/schoolContent/outgoing"; // Import Outgoing
 
 // Define a type for the action trigger
 type ActionTrigger = {
@@ -53,6 +54,7 @@ const Page = () => {
         )}
         {activeTab === "requests" && <Requests />}
         {activeTab === "borrowals" && <Borrowals />}
+        {activeTab === "outgoing" && <Outgoing />}
         {activeTab === "profile" && <Profile />}
         {activeTab === "achievements" && (
           <Achievements
