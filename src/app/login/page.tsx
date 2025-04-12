@@ -241,6 +241,7 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const router = useRouter();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,6 +351,17 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
+        
+        <div className="flex justify-between mt-1 text-xs">
+          <a href="/register" className="text-[#1e0fbf] no-underline" onClick={(e) => {
+            e.preventDefault();
+            router.push('/register');
+          }}>Register governing body</a>
+          <a href="/governBody/forgot-password" className="text-[#1e0fbf] no-underline" onClick={(e) => {
+            e.preventDefault();
+            router.push('/governBody/forgot-password');
+          }}>Forgot password?</a>
+        </div>
       </form>
     </div>
   );
