@@ -4,6 +4,7 @@ import NavBar from "@/components/donorContent/navBar";
 import Dashboard from "@/components/donorContent/dashboard";
 import Donations from "@/components/donorContent/donations";
 import SchoolNeeds from "@/components/donorContent/picks";
+import DonorProfile from "@/components/donorContent/profile"; // Import the profile component
 import Footer from "@/components/schoolContent/footer";
 import { useRouter } from "next/navigation";
 
@@ -124,6 +125,7 @@ const Page = () => {
         {activeTab === "dashboard" && <Dashboard setActiveTab={setActiveTab} donorData={donorData} />}
         {activeTab === "donations" && donorData && <Donations donorData={donorData} />}
         {activeTab === "schools" && donorData && <SchoolNeeds donorData={donorData} />}
+        {activeTab === "profile" && donorData && <DonorProfile donorData={donorData} />}
       </main>
 
       <Footer />

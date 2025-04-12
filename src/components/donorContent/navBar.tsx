@@ -12,16 +12,32 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <FiHome size={20} /> },
     { id: "donations", label: "My Donations", icon: <FiDollarSign size={20} /> },
-    { id: "schools", label: "Schools in Need", icon: <HiOutlineAcademicCap size={20} /> }
+    { id: "schools", label: "Schools in Need", icon: <HiOutlineAcademicCap size={20} /> },
+    { id: "profile", label: "My Profile", icon: <FiUser size={20} /> }
   ];
 
-  const handleLogout = () => {
-    // Implement logout functionality
+  const handleLogout = async () => {
     if (window.confirm('Are you sure you want to log out?')) {
-      // Clear cookies or tokens
-      document.cookie = 'donor_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-      // Redirect to login
-      window.location.href = '/login';
+      try {
+        const response = await fetch("/api/auth/logout", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({ userType: 'donor' }) // Indicate this is a donor logout
+        });
+        
+        if (response.ok) {
+          // Redirect to login page
+          window.location.href = '/login';
+        } else {
+          console.error('Logout failed');
+          alert('Failed to log out. Please try again.');
+        }
+      } catch (error) {
+        console.error('Error during logout:', error);
+        alert('An error occurred during logout');
+      }
     }
   };
 
