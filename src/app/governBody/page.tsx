@@ -4,10 +4,10 @@ import ActivityChart from '@/components/governBody/dashboard/ActivityChart';
 
 export default function Dashboard() {
   const stats = [
-    { title: 'Total Schools', value: '150', icon: School, trend: '+12%' },
-    { title: 'Equipment Requests', value: '45', icon: Package, trend: '+5%' },
-    { title: 'Achievements', value: '289', icon: Trophy, trend: '+18%' },
-    { title: 'Active Sports', value: '12', icon: BarChart3, trend: '+2%' },
+    { title: 'Total Schools', value: '150', icon: School },
+    { title: 'Equipment Requests', value: '45', icon: Package  },
+    { title: 'Achievements', value: '289', icon: Trophy },
+    { title: 'Active Sports', value: '12', icon: BarChart3  },
   ];
 
   return (
