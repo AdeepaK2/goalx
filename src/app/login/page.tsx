@@ -1,14 +1,17 @@
 'use client';
 
+
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import { Router } from 'lucide-react';
 
 type UserType = 'donor' | 'governBody' | 'school';
 
 const LoginPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<UserType>('donor');
+  const router = useRouter();
 
   const handleDonorLogin = async (email: string, password: string) => {
     console.log('Donor login attempt:', email);
@@ -20,6 +23,10 @@ const LoginPage: React.FC = () => {
 
   const handleSchoolLogin = async (email: string, password: string) => {
     console.log('School login attempt:', email);
+  };
+
+  const navigateToRegister = () => {
+    router.push('/register');
   };
 
   return (
@@ -97,6 +104,18 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const router = useRouter();
+  
+  // Define these functions at component level, not inside handleSubmit
+  const toReg = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push('/register');
+  }
+  
+  const toPwR = (e: React.MouseEvent) => {
+    e.preventDefault();
+    router.push('/login/password-reset');
+  }
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -208,8 +227,8 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
         </button>
         
         <div className="flex justify-between mt-1 text-xs">
-          <a href="/donor/register" className="text-[#1e0fbf] no-underline">Create an account</a>
-          <a href="/donor/forgot-password" className="text-[#1e0fbf] no-underline">Forgot password?</a>
+          <a href="/register" className="text-[#1e0fbf] no-underline" onClick={toReg}>Create an account</a>
+          <a href="/login/password-reset" className="text-[#1e0fbf] no-underline" onClick={toPwR}>Forgot password?</a>
         </div>
       </form>
     </div>
