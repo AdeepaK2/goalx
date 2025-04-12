@@ -9,7 +9,7 @@ export default function RegistrationButtons() {
   const buttons = [
     { label: 'School', icon: '🏫', description: 'Register your school to request sports equipment', color: 'from-blue-500/10 to-blue-600/5' },
     { label: 'Donor', icon: '🎁', description: 'Donate equipment to schools in need', color: 'from-purple-500/10 to-purple-600/5' },
-    { label: 'Regulator', icon: '📋', description: 'Oversee and facilitate equipment sharing', color: 'from-indigo-500/10 to-indigo-600/5' },
+    { label: 'Governing Body', icon: '📋', description: 'Oversee and facilitate equipment sharing', color: 'from-indigo-500/10 to-indigo-600/5' },
   ]
 
   const handleRegisterClick = (label: string) => {

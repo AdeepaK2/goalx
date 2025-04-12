@@ -10,7 +10,7 @@ export default function Statistics() {
       description: 'Schools actively participating'
     },
     { 
-      label: 'Total Regulators', 
+      label: 'Total Governing Body', 
       value: 50,
       icon: '📋',
       description: 'Ensuring quality and fairness'
