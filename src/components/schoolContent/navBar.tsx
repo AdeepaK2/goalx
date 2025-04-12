@@ -24,14 +24,14 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
   const [error, setError] = useState("");
   const [isLoggingOut, setIsLoggingOut] = useState(false);
 
+  // Remove "profile" from the tabs array
   const tabs = [
     { id: "dashboard", label: "Dashboard" },
     { id: "requests", label: "Requests" },
     { id: "borrowals", label: "Borrowals" },
     { id: "donations", label: "Donations" },
     { id: "inquiries", label: "Inquiries" },
-    { id: "achievements", label: "Achievements" },
-    { id: "profile", label: "Profile" }  // Add this line
+    { id: "achievements", label: "Achievements" }
   ];
 
   // Fetch school data on component mount
@@ -294,15 +294,7 @@ const NavBar = ({ activeTab, setActiveTab }: NavBarProps) => {
               </div>
             )}
             <div className="mt-3 space-y-1">
-              <button 
-                onClick={() => {
-                  setActiveTab("profile");
-                  setMobileMenuOpen(false);
-                }}
-                className="block w-full text-left px-4 py-2 text-base font-medium text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-              >
-                Profile
-              </button>
+              {/* Remove the Profile button from mobile menu */}
               <button 
                 onClick={handleLogout} 
                 disabled={isLoggingOut}
