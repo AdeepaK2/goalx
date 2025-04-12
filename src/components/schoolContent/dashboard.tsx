@@ -245,7 +245,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <h2 className="text-lg font-semibold text-gray-800 flex items-center">
                 <FiBox className="mr-2 text-[#6e11b0]" /> Items Requested
               </h2>
-              <span className="bg-[#6e11b0] bg-opacity-20 text-[#6e11b0] py-1 px-3 rounded-full text-sm font-medium">
+              <span className="bg-[#6e11b0] bg-opacity-20 py-1 px-3 rounded-full text-sm font-medium text-white">
                 Pending
               </span>
             </div>
@@ -288,7 +288,7 @@ const Dashboard: React.FC<DashboardProps> = ({
               <h2 className="text-lg font-semibold text-gray-800 flex items-center">
                 <FiCheckCircle className="mr-2 text-[#1e0fbf]" /> Items Borrowed
               </h2>
-              <span className="bg-[#1e0fbf] bg-opacity-20 text-[#1e0fbf] py-1 px-3 rounded-full text-sm font-medium">
+              <span className="bg-[#1e0fbf] bg-opacity-20 text-white py-1 px-3 rounded-full text-sm font-medium">
                 Active
               </span>
             </div>
