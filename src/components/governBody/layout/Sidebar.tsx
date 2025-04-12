@@ -2,7 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { LayoutDashboard, Package, School, Trophy, LogOut } from 'lucide-react';
+import { LayoutDashboard, Package, School, Trophy, LogOut,User } from 'lucide-react';
 import Image from 'next/image';
 
 const navigation = [
@@ -10,6 +10,7 @@ const navigation = [
   { name: 'Equipment Requests', href: '/governBody/equipmentRequests', icon: Package },
   { name: 'School List', href: '/governBody/schools', icon: School },
   { name: 'Sport Summary', href: '/governBody/sportSummary', icon: Trophy },
+  { name: 'My Profile', href: '/governBody/profile', icon: User },
 ];
 
 export default function Sidebar() {
