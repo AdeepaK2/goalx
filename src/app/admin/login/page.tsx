@@ -108,7 +108,7 @@ const AdminLoginPage: React.FC = () => {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 placeholder="Enter your email"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-black"
                 required
               />
             </div>
@@ -123,7 +123,7 @@ const AdminLoginPage: React.FC = () => {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 placeholder="Enter your password"
-                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
+                className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-black"
                 required
               />
             </div>
