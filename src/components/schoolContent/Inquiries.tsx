@@ -77,7 +77,7 @@ const Inquiries: React.FC = () => {
       }
     };
 
-    // Fetch equipment requests and filter them
+    // Fetch equipment requests from nearby schools
     const fetchRequests = async (school: School) => {
       if (!school?.location?.district) {
         console.error('Cannot fetch equipment requests: School district is undefined');
@@ -89,29 +89,29 @@ const Inquiries: React.FC = () => {
       try {
         console.log('Fetching equipment requests...');
         
-        // Fetch all pending equipment requests
+        // Fetch equipment requests specifically for the same district
         const response = await axios.get("/api/equipment/request", {
           params: {
             status: "pending",
-            limit: 50 // Get a larger set to filter locally
+            district: school.location.district, // Add district parameter
+            limit: 50
           }
         });
 
         console.log('Equipment requests response:', response.data);
         
         if (response.data && Array.isArray(response.data.equipmentRequests)) {
-          // Filter for requests from other schools in the same district
+          // Filter out requests from the current school
           const districtRequests = response.data.equipmentRequests.filter(
             (req: EquipmentRequest) => {
-              if (!req.school || !req.school._id || !req.school.location) {
+              // Skip if missing data
+              if (!req.school || !req.school._id) {
                 console.warn('Skipping request with incomplete school data:', req._id);
                 return false;
               }
               
-              return (
-                req.school._id !== school._id && // Not from current school
-                req.school.location.district === school.location.district // Same district
-              );
+              // Only include requests NOT from the current school
+              return req.school._id !== school._id;
             }
           );
           
