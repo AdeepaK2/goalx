@@ -4,10 +4,9 @@ interface StatsCardProps {
   title: string;
   value: string;
   icon: typeof LucideIcon;
-  trend: string;
 }
 
-export default function StatsCard({ title, value, icon: Icon, trend }: StatsCardProps) {
+export default function StatsCard({ title, value, icon: Icon}: StatsCardProps) {
   return (
     <div className="rounded-lg border bg-card p-6">
       <div className="flex items-center justify-between">
@@ -19,10 +18,7 @@ export default function StatsCard({ title, value, icon: Icon, trend }: StatsCard
           <Icon className="h-5 w-5 text-primary" />
         </div>
       </div>
-      <div className="mt-4">
-        <span className="text-sm text-green-500">{trend}</span>
-        <span className="text-sm text-muted-foreground"> vs last month</span>
-      </div>
+      
     </div>
   );
 }
