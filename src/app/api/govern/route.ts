@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import mongoose from 'mongoose';
 import GovernBody from '@/model/governBodySchema';
+import Sport from '@/model/sportSchema';
 import bcrypt from 'bcryptjs';
 import { generateVerificationToken, sendGovernBodyVerificationEmail } from '@/utils/emailService';
 import { ensureConnection } from '@/utils/connectionManager';
@@ -37,6 +38,70 @@ export async function GET(request: NextRequest) {
     console.error('Error in GET request:', error);
     return NextResponse.json(
       { error: error.message || 'Failed to fetch governing bodies' },
+      { status: 500 }
+    );
+  }
+}
+
+// Migration function to update specializedSport to specializedSports array
+async function migrateSpecializedSports() {
+  try {
+    // Get all governing bodies
+    const governBodies = await GovernBody.find({});
+    const results = [];
+
+    for (const body of governBodies) {
+      if (!body.specializedSport) {
+        results.push({ 
+          governBodyId: body.governBodyId,
+          name: body.name,
+          status: 'skipped',
+          reason: 'No specializedSport field'
+        });
+        continue;
+      }
+      
+      // Find matching sport by name
+      const sportName = body.specializedSport;
+      const sport = await Sport.findOne({ sportName: { $regex: new RegExp(`^${sportName}$`, 'i') } });
+      
+      if (!sport) {
+        results.push({ 
+          governBodyId: body.governBodyId,
+          name: body.name,
+          status: 'failed',
+          reason: `Sport "${sportName}" not found`
+        });
+        continue;
+      }
+      
+      // Update governing body with sport reference
+      const updatedBody = await GovernBody.findByIdAndUpdate(
+        body._id,
+        { 
+          $set: { specializedSports: [sport._id] },
+          $unset: { specializedSport: "" }
+        },
+        { new: true }
+      );
+      
+      results.push({
+        governBodyId: body.governBodyId,
+        name: body.name,
+        status: 'migrated',
+        from: sportName,
+        to: sport._id
+      });
+    }
+    
+    return NextResponse.json({
+      message: 'Migration completed',
+      results
+    });
+  } catch (error: any) {
+    console.error('Error in migration:', error);
+    return NextResponse.json(
+      { error: error.message || 'Migration failed' },
       { status: 500 }
     );
   }

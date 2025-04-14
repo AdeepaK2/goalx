@@ -7,11 +7,12 @@ const governBodySchema = new mongoose.Schema({
   governBodyId: { type: String, unique: true, index: true },
   name: { type: String, required: true, index: true },
   abbreviation: { type: String, index: true },
-  // Optional specialized sport
-  specializedSport: { 
-    type: String,
+  // Replace the current specializedSport field with:
+  specializedSports: [{ 
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Sport',
     index: true
-  },
+  }],
   description: { type: String },
   logoUrl: { type: String },
   contact: {
@@ -43,7 +44,7 @@ governBodySchema.index({ name: 'text', abbreviation: 'text', description: 'text'
 });
 
 // Index for sport filtering
-governBodySchema.index({ specializedSport: 1 }, { name: 'sport_filter' });
+governBodySchema.index({ specializedSports: 1 }, { name: 'sport_filter' });
 
 // Update timestamp on update
 governBodySchema.pre('findOneAndUpdate', function() {
