@@ -240,54 +240,64 @@ const EquipmentRequestComponent: React.FC<EquipmentRequestProps> = ({ governBody
 
   const handleResponseSubmit = async (values: any) => {
     try {
-      console.log("Form values:", values); // Debug: log form values
-      
-      // Check if status is set
-      if (!values.status) {
-        message.error('Please select a response status');
+      console.log("Form values:", values);
+
+      if (values.status === 'approved' && !governBodyId) {
+        message.error('Missing governing body ID. Cannot create transaction.');
         return;
       }
 
-      // For rental type, ensure dates are provided and validate properly
-      if (values.transactionType === 'rental') {
-        if (!values.startDate || !values.returnDueDate) {
-          message.error('Please provide both start and return dates for rental');
-          return;
-        }
-        
-        // Validate that return date is after start date
-        if (values.startDate && values.returnDueDate && 
-            values.returnDueDate.isBefore(values.startDate)) {
-          message.error('Return due date must be after start date');
-          return;
-        }
-        
-        // Validate that rental terms are provided - required by schema
-        if (!values.rentalTerms || !values.rentalTerms.trim()) {
-          message.error('Please specify rental terms and conditions');
-          return;
-        }
+      // Check if status is set
+      if (!values.status) {
+        message.error('Please select a status for the request');
+        return;
       }
 
-      // Prepare response data for the equipment request
-      const responseData = {
+      // Get the existing request for item references
+      const existingRequest = selectedRequest;
+      if (!existingRequest) {
+        message.error('Request data missing');
+        return;
+      }
+
+      // Prepare base response data for the equipment request
+      const responseData: any = {
         status: values.status,
-        rejectionReason: values.status === 'rejected' ? values.rejectionReason : undefined,
-        additionalNotes: values.notes,
+        additionalNotes: values.notes || undefined,
         processedBy: donorData?.name || 'System',
-        processedAt: new Date().toISOString(),
-        items: values.items.map((item: any) => ({
-          equipment: item.equipmentId,
-          quantityApproved: item.quantityApproved || 0,
-          notes: item.notes || ''
-        })).filter((item: any) => item.equipment)
+        processedAt: new Date().toISOString()
       };
+
+      // Add rejection reason only if status is rejected
+      if (values.status === 'rejected') {
+        if (!values.rejectionReason) {
+          message.error('Rejection reason is required when rejecting a request');
+          return;
+        }
+        responseData.rejectionReason = values.rejectionReason;
+      } else if (values.status === 'approved') {
+        // Update quantities approved for each item if status is approved
+        if (values.items && values.items.length > 0) {
+          const updatedItems = existingRequest.items.map((item: RequestItem, index: number) => {
+            const formItem = values.items.find((i: any) => 
+              (item.equipment as Equipment)._id === i.equipmentId);
+            
+            if (formItem) {
+              return {
+                ...item,
+                quantityApproved: formItem.quantityApproved
+              };
+            }
+            return item;
+          });
+          responseData.items = updatedItems;
+        }
+      }
       
-      // Log the response data for debugging
       console.log("Sending response data:", responseData);
       
       // Send update to API
-      const response = await fetch(`/api/equipment/request?id=${selectedRequest?.requestId}`, {
+      const response = await fetch(`/api/equipment/request?id=${existingRequest.requestId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(responseData)
@@ -295,106 +305,101 @@ const EquipmentRequestComponent: React.FC<EquipmentRequestProps> = ({ governBody
       
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(`Failed to update request: ${errorData.error || response.statusText}`);
+        throw new Error(errorData.error || 'Failed to update request');
       }
       
-      // Store the updated request data
       const updatedRequest = await response.json();
       
-      // Update local state with the updated request
-      setRequests(prev => prev.map(req => 
-        req.requestId === updatedRequest.requestId ? updatedRequest : req
-      ));
-      
-      message.success(`Request ${values.status === 'approved' ? 'approved' : values.status === 'rejected' ? 'rejected' : 'updated'} successfully`);
-      
-      // If request is approved or partially approved, create an equipment transaction
-      if (values.status === 'approved' || values.status === 'partial') {
+      // If approved, create a transaction
+      if (values.status === 'approved') {
         try {
-          // Get approved items (with quantity > 0)
-          const approvedItems = values.items
-            .filter((item: any) => item.quantityApproved > 0)
-            .map((item: any) => ({
-              equipment: item.equipmentId,
-              quantity: item.quantityApproved,
-              condition: 'good',
-              notes: item.notes
-            }));
+          console.log("governBodyId type:", typeof governBodyId, "value:", governBodyId);
           
-          // Only proceed if there are approved items
-          if (approvedItems.length === 0) {
-            message.warning('No items approved. Transaction not created.');
-            setResponseVisible(false);
-            responseForm.resetFields();
-            return;
+          // First fetch the governing body to get its MongoDB _id
+          const governBodyResponse = await fetch(`/api/govern?id=${governBodyId}`);
+          
+          if (!governBodyResponse.ok) {
+            throw new Error(`Failed to fetch govern body details: ${governBodyId}`);
           }
           
-          // Create transaction data object matching schema requirements
-          const transactionData: any = {
-            providerType: 'governBody',
-            provider: governBodyId,
-            recipient: (selectedRequest?.school as School)?._id,
+          const governBodyData = await governBodyResponse.json();
+          
+          if (!governBodyData || !governBodyData._id) {
+            throw new Error('Could not retrieve governing body ID');
+          }
+
+          // Create transaction for the approved equipment
+          const transactionData = {
+            providerType: 'governBody',  // Changed from 'GovernBody' to 'governBody'
+            provider: String(governBodyData._id),
+            recipient: String((existingRequest.school as School)._id),
             transactionType: values.transactionType || 'permanent',
-            status: 'approved', // Setting initial status to approved
-            items: approvedItems,
-            additionalNotes: values.notes,
-            approvedBy: donorData?.id,
-            approvedAt: new Date().toISOString()
+            items: values.items
+              .filter((item: any) => item.quantityApproved > 0)
+              .map((item: any) => {
+                // Find the original item from the request to get the equipment reference
+                const originalItem = existingRequest.items.find((reqItem: any) => 
+                  (reqItem.equipment as Equipment)._id === item.equipmentId);
+                  
+                if (!originalItem) {
+                  console.error(`Could not find matching original item for ${item.equipmentId}`);
+                  return null;
+                }
+                  
+                return {
+                  equipment: item.equipmentId,
+                  quantity: item.quantityApproved,
+                  condition: 'good',
+                  notes: originalItem.notes || `From request ${existingRequest.requestId}`
+                };
+              })
+              .filter(Boolean), // Remove any null items
+            status: 'approved',
+            additionalNotes: `Created from equipment request ${existingRequest.requestId}`,
+            termsAndConditions: 'Standard equipment loan terms apply',
+            ...(values.transactionType === 'rental' && values.rentalDates ? {
+              rentalDetails: {
+                startDate: values.rentalDates[0].toISOString(),
+                returnDueDate: values.rentalDates[1].toISOString(),
+                rentalFee: values.rentalFee || 0
+              }
+            } : {})
           };
-          
-          // Add rental details if transaction type is rental
-          if (values.transactionType === 'rental') {
-            transactionData.rentalDetails = {
-              startDate: values.startDate.toISOString(),
-              returnDueDate: values.returnDueDate.toISOString()
-            };
-            
-            if (values.rentalTerms && values.rentalTerms.trim()) {
-              transactionData.termsAndConditions = values.rentalTerms.trim();
-            }
-          }
-          
-          console.log("Sending transaction data:", transactionData);
-          
+
+          // Before sending the transaction request
+          console.log("Transaction data to send:", JSON.stringify(transactionData, null, 2));
+
           // Create the transaction
           const transactionResponse = await fetch('/api/equipment/transaction', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(transactionData)
           });
-          
+
+          // Get the detailed error message
           if (!transactionResponse.ok) {
-            const errorData = await transactionResponse.json();
-            console.error("Transaction error response:", errorData);
-            throw new Error(`Failed to create equipment transaction: ${errorData.error || 'Unknown error'}`);
+            const transactionError = await transactionResponse.json();
+            console.error("Transaction error details:", transactionError);
+            message.warning(`Request approved but transaction creation failed: ${transactionError.error || JSON.stringify(transactionError)}`);
+          } else {
+            const transaction = await transactionResponse.json();
+            message.success(`Transaction ${transaction.transactionId} created successfully`);
           }
-          
-          const transaction = await transactionResponse.json();
-          message.success(`Equipment transaction created successfully: ${transaction.transactionId}`);
-          
-          // Refresh the requests list to ensure UI reflects all changes
-          const refreshedRequests = await fetch('/api/equipment/request').then(res => res.json());
-          if (refreshedRequests?.equipmentRequests) {
-            setRequests(refreshedRequests.equipmentRequests);
-            setFilteredRequests(prev => {
-              // Apply current filters to the refreshed data
-              return refreshedRequests.equipmentRequests.filter((req: EquipmentRequest) => 
-                (!selectedStatus || req.status === selectedStatus) &&
-                (!selectedSport || req.items.some((item: RequestItem) => {
-                  const equip = item.equipment as Equipment;
-                  const sport = equip.sport as Sport;
-                  return sport?._id === selectedSport || sport?.sportId === selectedSport;
-                })) &&
-                // Apply other filters as needed
-                (searchText.trim() === '' || req.eventName.toLowerCase().includes(searchText.toLowerCase()))
-              );
-            });
-          }
-        } catch (transactionErr) {
-          console.error('Error creating equipment transaction:', transactionErr);
-          message.warning('Request status updated, but failed to create equipment transaction');
+        } catch (transactionError) {
+          console.error('Error creating transaction:', transactionError);
+          message.warning('Request approved but transaction creation failed');
         }
       }
+      
+      // Update local state
+      setRequests(prev => prev.map(req => 
+        req.requestId === updatedRequest.requestId ? updatedRequest : req
+      ));
+      setFilteredRequests(prev => prev.map(req => 
+        req.requestId === updatedRequest.requestId ? updatedRequest : req
+      ));
+      
+      message.success(`Request ${values.status === 'approved' ? 'approved' : values.status === 'rejected' ? 'rejected' : 'updated'} successfully`);
       
       // Close modal and reset form
       setResponseVisible(false);
@@ -770,7 +775,6 @@ const EquipmentRequestComponent: React.FC<EquipmentRequestProps> = ({ governBody
         open={responseVisible}
         onCancel={() => setResponseVisible(false)}
         footer={null}
-        width={700}
       >
         <Form
           form={responseForm}
@@ -779,186 +783,157 @@ const EquipmentRequestComponent: React.FC<EquipmentRequestProps> = ({ governBody
         >
           <Form.Item
             name="status"
-            label="Response"
-            rules={[{ required: true, message: 'Please select a response' }]}
+            label="Status"
+            rules={[{ required: true, message: 'Please select a status' }]}
           >
             <Select>
-              <Option value="approved">Approve Request</Option>
-              <Option value="rejected">Reject Request</Option>
+              <Option value="approved">Approve</Option>
+              <Option value="rejected">Reject</Option>
               <Option value="partial">Partially Approve</Option>
             </Select>
           </Form.Item>
-
-          <Form.Item
-            name="transactionType"
-            label="Transaction Type"
-            rules={[{ required: true, message: 'Please select transaction type' }]}
-            initialValue="permanent"
-          >
-            <Radio.Group>
-              <Radio value="permanent">Permanent Transfer</Radio>
-              <Radio value="rental">Temporary Loan</Radio>
-            </Radio.Group>
-          </Form.Item>
-
+          
+          {/* Show different fields based on selected status */}
           <Form.Item
             noStyle
             shouldUpdate={(prevValues, currentValues) => 
-              prevValues.transactionType !== currentValues.transactionType
+              prevValues.status !== currentValues.status
             }
           >
             {({ getFieldValue }) => {
-              const transactionType = getFieldValue('transactionType');
-              
-              return transactionType === 'rental' ? (
-                <div className="bg-blue-50 p-3 mb-4 rounded-md border border-blue-200">
-                  <h3 className="font-medium text-blue-700 mb-2">Rental Details</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <Form.Item
-                      name="startDate"
-                      label="Start Date"
-                      rules={[{ required: true, message: 'Please select a start date' }]}
-                    >
-                      <DatePicker style={{ width: '100%' }} />
-                    </Form.Item>
-                    <Form.Item
-                      name="returnDueDate"
-                      label="Return Due Date"
-                      rules={[{ required: true, message: 'Please select a return date' }]}
-                      dependencies={['startDate']}
-                    >
-                      <DatePicker 
-                        style={{ width: '100%' }} 
-                        disabledDate={(current) => {
-                          const startDate = getFieldValue('startDate');
-                          return startDate && current && current < startDate;
-                        }}
-                      />
-                    </Form.Item>
-                    <Form.Item
-                      name="rentalTerms"
-                      label="Rental Terms and Conditions"
-                      className="md:col-span-2"
-                      rules={[{ required: true, message: 'Please specify rental terms and conditions' }]}
-                    >
-                      <TextArea 
-                        rows={3}
-                        placeholder="Specify terms and conditions for this equipment loan (e.g., care instructions, liability, return condition)" 
-                      />
-                    </Form.Item>
-                  </div>
-                  <p className="text-blue-600 text-sm mt-2">
-                    <i>Note: All equipment is provided free of charge as part of our support program.</i>
-                  </p>
-                </div>
-              ) : null;
-            }}
-          </Form.Item>
-          
-          <Form.Item
-            noStyle
-            shouldUpdate={(prevValues: any, currentValues: any) => prevValues.status !== currentValues.status}
-          >
-            {({ getFieldValue }: { getFieldValue: (name: string) => any }) => {
               const status = getFieldValue('status');
               
-              return status === 'rejected' ? (
-                <Form.Item
-                  name="rejectionReason"
-                  label="Rejection Reason"
-                  rules={[{ required: true, message: 'Please provide a reason for rejection' }]}
-                >
-                  <TextArea rows={3} />
-                </Form.Item>
-              ) : (
-                <Form.List name="items">
-                  {(fields: { key: number; name: number }[]) => (
+              if (status === 'rejected') {
+                return (
+                  <Form.Item
+                    name="rejectionReason"
+                    label="Rejection Reason"
+                    rules={[{ required: true, message: 'Please provide a reason for rejection' }]}
+                  >
+                    <TextArea rows={4} />
+                  </Form.Item>
+                );
+              }
+              
+              if (status === 'approved' || status === 'partial') {
+                return (
+                  <>
+                    {/* Items list with approved quantities */}
                     <div className="mb-4">
-                      <h3 className="font-medium mb-2">Equipment Items</h3>
-                      {fields.map(({ key, name }: { key: number; name: number }) => {
-                        const itemIndex: number = name;
-                        const currentItem: RequestItem | undefined = selectedRequest?.items[itemIndex];
-                        const equipment = currentItem?.equipment as Equipment;
-                        
-                        return (
-                          <Card key={key} className="mb-2" size="small">
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
-                              <div>
-                                <p className="text-gray-500">Equipment</p>
-                                <p>{equipment?.name}</p>
-                                <Form.Item
-                                  name={[name, 'equipmentId']}
-                                  hidden
-                                >
-                                  <Input />
-                                </Form.Item>
-                              </div>
-                              <div>
-                                <p className="text-gray-500">Quantity Requested</p>
-                                <p>{currentItem?.quantityRequested}</p>
-                                <Form.Item
-                                  name={[name, 'quantityRequested']}
-                                  hidden
-                                >
-                                  <InputNumber />
-                                </Form.Item>
-                              </div>
-                              <div>
-                                <Form.Item
-                                  name={[name, 'quantityApproved']}
-                                  label="Quantity Approved"
-                                  rules={[
-                                    { required: status !== 'rejected', message: 'Please enter approved quantity' },
-                                    { 
-                                      type: 'number', 
-                                      min: 0, 
-                                      max: currentItem?.quantityRequested, 
-                                      message: `Cannot exceed requested quantity (${currentItem?.quantityRequested})` 
-                                    }
-                                  ]}
-                                >
-                                  <InputNumber 
-                                    min={0} 
-                                    max={currentItem?.quantityRequested} 
-                                    disabled={status === 'rejected'}
-                                    style={{ width: '100%' }} 
-                                  />
-                                </Form.Item>
-                              </div>
-                              <div className="md:col-span-3">
-                                <Form.Item
-                                  name={[name, 'notes']}
-                                  label="Item Notes"
-                                >
-                                  <Input placeholder="Any notes about this item" />
-                                </Form.Item>
-                              </div>
-                            </div>
-                          </Card>
-                        );
-                      })}
+                      <h3 className="text-lg font-medium">Equipment Items</h3>
+                      <Form.List name="items">
+                        {(fields) => (
+                          <div className="space-y-3">
+                            {fields.map(field => {
+                              const item = selectedRequest?.items[field.name];
+                              const equipment = item?.equipment as Equipment;
+                              
+                              return (
+                                <div key={field.key} className="flex items-center space-x-4 p-2 border rounded">
+                                  <div className="flex-1">
+                                    <div className="font-medium">{equipment?.name}</div>
+                                    <div className="text-sm text-gray-500">Requested: {item?.quantityRequested}</div>
+                                    <Form.Item
+                                      name={[field.name, 'equipmentId']}
+                                      hidden
+                                    >
+                                      <Input />
+                                    </Form.Item>
+                                  </div>
+                                  <Form.Item
+                                    name={[field.name, 'quantityApproved']}
+                                    label="Approve"
+                                    rules={[
+                                      { required: true, message: 'Required' },
+                                      { 
+                                        type: 'number', 
+                                        min: 0, 
+                                        max: item?.quantityRequested,
+                                        message: `Must be between 0-${item?.quantityRequested}` 
+                                      }
+                                    ]}
+                                  >
+                                    <InputNumber min={0} max={item?.quantityRequested} />
+                                  </Form.Item>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </Form.List>
                     </div>
-                  )}
-                </Form.List>
-              );
+                    
+                    {/* Transaction details */}
+                    <Divider>Transaction Details</Divider>
+                    
+                    <Form.Item
+                      name="transactionType"
+                      label="Transaction Type"
+                      initialValue="permanent"
+                    >
+                      <Radio.Group>
+                        <Radio value="permanent">Permanent Transfer</Radio>
+                        <Radio value="rental">Rental</Radio>
+                      </Radio.Group>
+                    </Form.Item>
+                    
+                    <Form.Item
+                      noStyle
+                      shouldUpdate={(prevValues, currentValues) => 
+                        prevValues.transactionType !== currentValues.transactionType
+                      }
+                    >
+                      {({ getFieldValue }) => {
+                        const transactionType = getFieldValue('transactionType');
+                        
+                        if (transactionType === 'rental') {
+                          return (
+                            <>
+                              <Form.Item
+                                name="rentalDates"
+                                label="Rental Period"
+                                rules={[{ required: true, message: 'Please select rental period' }]}
+                              >
+                                <RangePicker />
+                              </Form.Item>
+                              <Form.Item
+                                name="rentalFee"
+                                label="Rental Fee (optional)"
+                              >
+                                <InputNumber
+                                  min={0}
+                                  precision={2}
+                                  addonBefore="$"
+                                />
+                              </Form.Item>
+                            </>
+                          );
+                        }
+                        return null;
+                      }}
+                    </Form.Item>
+                  </>
+                );
+              }
+              
+              return null;
             }}
           </Form.Item>
           
-          <Form.Item
-            name="notes"
-            label="Additional Notes"
-          >
-            <TextArea rows={3} placeholder="Any additional notes or instructions" />
+          <Form.Item name="notes" label="Additional Notes">
+            <TextArea rows={4} />
           </Form.Item>
           
-          <div className="flex justify-end space-x-2">
-            <Button onClick={() => setResponseVisible(false)}>
-              Cancel
-            </Button>
-            <Button type="primary" htmlType="submit">
-              Submit Response
-            </Button>
-          </div>
+          <Form.Item>
+            <div className="flex justify-end space-x-2">
+              <Button onClick={() => setResponseVisible(false)}>
+                Cancel
+              </Button>
+              <Button type="primary" htmlType="submit">
+                Submit
+              </Button>
+            </div>
+          </Form.Item>
         </Form>
       </Modal>
       

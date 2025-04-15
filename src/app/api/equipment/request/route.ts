@@ -195,15 +195,15 @@ export async function PATCH(request: NextRequest) {
     
     const body = await request.json();
     
-    // Create a proper query that avoids ObjectId casting errors
-    const query: any = { requestId: id };
-    
-    // Only add _id to query if it's a valid ObjectId format (24 char hex)
-    if (/^[0-9a-fA-F]{24}$/.test(id)) {
-      query.$or = [{ _id: id }, { requestId: id }];
+    // Create a proper query that handles both ObjectId and requestId formats
+    let query;
+    if (mongoose.Types.ObjectId.isValid(id)) {
+      query = { $or: [{ _id: id }, { requestId: id }] };
+    } else {
+      query = { requestId: id };
     }
     
-    // Find the request
+    // Find the request first to verify it exists
     const existingRequest = await EquipmentRequest.findOne(query);
     
     if (!existingRequest) {
@@ -213,7 +213,7 @@ export async function PATCH(request: NextRequest) {
       });
     }
     
-    // Make sure all updated items have valid equipment references
+    // Validate items if present in the update
     if (body.items) {
       for (const item of body.items) {
         if (!item.equipment) {
@@ -227,24 +227,24 @@ export async function PATCH(request: NextRequest) {
       }
     }
     
+    // Update the timestamp
+    body.updatedAt = new Date();
+    
     // Update the request with proper validation
     try {
-      const updatedRequest = await EquipmentRequest.findOneAndUpdate(
-        query,
-        { $set: body },
-        { new: true, runValidators: true }
-      )
-      .populate('school', 'name schoolId')
-      .populate('items.equipment', 'name equipmentId');
+      // Apply updates directly to the document we found and save it
+      // This approach avoids potential casting issues
+      Object.keys(body).forEach(key => {
+        existingRequest[key] = body[key];
+      });
       
-      if (!updatedRequest) {
-        return new NextResponse(JSON.stringify({ error: 'Failed to update equipment request' }), {
-          status: 404,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
+      await existingRequest.save();
       
-      return new NextResponse(JSON.stringify(updatedRequest), {
+      // Populate references for response
+      await existingRequest.populate('school', 'name schoolId');
+      await existingRequest.populate('items.equipment', 'name equipmentId');
+      
+      return new NextResponse(JSON.stringify(existingRequest), {
         status: 200,
         headers: { 'Content-Type': 'application/json' }
       });
