@@ -143,12 +143,12 @@ export async function POST(request: NextRequest) {
     if (body.providerType === 'school') {
       const school = await School.findById(body.provider);
       providerExists = !!school;
-    } else if (body.providerType === 'governBody') {
+    } else if (body.providerType === 'GovernBody') {  // Changed from 'governBody' to 'GovernBody'
       const governBody = await GovernBody.findById(body.provider);
       providerExists = !!governBody;
     } else {
       return new NextResponse(JSON.stringify({ 
-        error: 'Invalid providerType. Must be either "school" or "governBody"'
+        error: 'Invalid providerType. Must be either "school" or "GovernBody"'  // Changed error message
       }), {
         status: 400,
         headers: { 'Content-Type': 'application/json' }

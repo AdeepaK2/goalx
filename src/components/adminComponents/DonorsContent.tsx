@@ -7,6 +7,19 @@ import DonorDelete from '@/components/adminComponents/DonorDelete';
 // Fetcher function for SWR
 const fetcher = (url: string) => fetch(url).then(res => res.json());
 
+// Helper function to get proper image URL
+const getProfileImageUrl = (profilePicUrl: string | undefined) => {
+  if (!profilePicUrl) return null;
+  
+  // If it's already a complete URL (starts with http or https), use it directly
+  if (profilePicUrl.startsWith('http')) {
+    return profilePicUrl;
+  }
+  
+  // Otherwise construct the download API URL
+  return `/api/file/download?file=${encodeURIComponent(profilePicUrl)}`;
+};
+
 // Types
 interface Donor {
   _id: string;
@@ -48,6 +61,7 @@ const DonorsContent: React.FC = () => {
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
   const [editingDonor, setEditingDonor] = useState<Donor | null>(null);
   const [deletingDonor, setDeletingDonor] = useState<Donor | null>(null);
+  const [imageErrors, setImageErrors] = useState<Record<string, boolean>>({});
 
   // Debounce search input
   React.useEffect(() => {
@@ -129,6 +143,10 @@ const DonorsContent: React.FC = () => {
     // The actual API call is handled in the DonorDelete component
     refreshDonors();
     setDeletingDonor(null);
+  };
+
+  const handleImageError = (donorId: string) => {
+    setImageErrors(prev => ({ ...prev, [donorId]: true }));
   };
 
   // Pagination helpers
@@ -356,16 +374,19 @@ const DonorsContent: React.FC = () => {
             <tbody className="divide-y divide-gray-200">
               {donorData?.donors?.map((donor: Donor) => {
                 const stats = getDonorStats(donor.donorId);
+                const showPlaceholder = !donor.profilePicUrl || imageErrors[donor._id];
+                const imageUrl = getProfileImageUrl(donor.profilePicUrl);
                 
                 return (
                   <tr key={donor._id} className="hover:bg-gray-50">
                     <td className="py-4 px-4 text-sm font-medium text-gray-900">
                       <div className="flex items-center">
-                        {donor.profilePicUrl ? (
+                        {!showPlaceholder ? (
                           <img 
-                            src={donor.profilePicUrl} 
+                            src={imageUrl || ''}
                             alt={donor.displayName}
                             className="w-8 h-8 rounded-full mr-3 object-cover"
+                            onError={() => handleImageError(donor._id)}
                           />
                         ) : (
                           <div className="w-8 h-8 rounded-full bg-gray-200 mr-3 flex items-center justify-center">

@@ -1,7 +1,8 @@
 import React, { useState, FormEvent } from 'react';
+import { useRouter } from 'next/navigation';
 
 interface GovernBodyLoginProps {
-  onLogin: (email: string, password: string) => Promise<void>;
+  onLogin: (email: string, password: string) => Promise<{success: boolean, redirectUrl?: string}>;
   isLoading?: boolean;
 }
 
@@ -10,6 +11,8 @@ const GovernBodyLogin: React.FC<GovernBodyLoginProps> = ({ onLogin, isLoading = 
   const [password, setPassword] = useState('');
   const [emailError, setEmailError] = useState('');
   const [passwordError, setPasswordError] = useState('');
+  const [loginError, setLoginError] = useState('');
+  const router = useRouter();
 
   const validateEmail = (email: string): boolean => {
     const regex = /^\w+([.-]?\w+)*@\w+([.-]?\w+)*(\.\w{2,3})+$/;
@@ -26,12 +29,21 @@ const GovernBodyLogin: React.FC<GovernBodyLoginProps> = ({ onLogin, isLoading = 
 
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
+    setLoginError('');
     
     const isEmailValid = validateEmail(email);
     const isPasswordValid = validatePassword(password);
     
     if (isEmailValid && isPasswordValid) {
-      await onLogin(email, password);
+      try {
+        const result = await onLogin(email, password);
+        if (result.success && result.redirectUrl) {
+          router.push(result.redirectUrl);
+        }
+      } catch (error) {
+        setLoginError('Login failed. Please check your credentials and try again.');
+        console.error('Login error:', error);
+      }
     }
   };
 
@@ -39,6 +51,12 @@ const GovernBodyLogin: React.FC<GovernBodyLoginProps> = ({ onLogin, isLoading = 
     <div className="flex justify-center items-center min-h-screen bg-white">
       <div className="bg-white rounded-lg shadow-lg p-10 w-full max-w-md">
         <h1 className="text-2xl font-semibold mb-6 text-[#1e0fbf] text-center">Governing Body Login</h1>
+        
+        {loginError && (
+          <div className="mb-4 p-3 bg-red-50 text-red-700 rounded-md text-sm">
+            {loginError}
+          </div>
+        )}
         
         <form onSubmit={handleSubmit}>
           <div className="mb-5">

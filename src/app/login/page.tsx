@@ -1,17 +1,15 @@
-'use client';
 
+'use client';
 
 import React, { useState } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Router } from 'lucide-react';
 
 type UserType = 'donor' | 'governBody' | 'school';
 
 const LoginPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<UserType>('donor');
-  const router = useRouter();
 
   const handleDonorLogin = async (email: string, password: string) => {
     console.log('Donor login attempt:', email);
@@ -23,10 +21,6 @@ const LoginPage: React.FC = () => {
 
   const handleSchoolLogin = async (email: string, password: string) => {
     console.log('School login attempt:', email);
-  };
-
-  const navigateToRegister = () => {
-    router.push('/register');
   };
 
   return (
@@ -104,18 +98,6 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const router = useRouter();
-  
-  // Define these functions at component level, not inside handleSubmit
-  const toReg = (e: React.MouseEvent) => {
-    e.preventDefault();
-    router.push('/register');
-  }
-  
-  const toPwR = (e: React.MouseEvent) => {
-    e.preventDefault();
-    router.push('/login/password-reset');
-  }
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -196,7 +178,7 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-[#1e0fbf]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
             disabled={isLoading}
             required
           />
@@ -212,7 +194,7 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-[#1e0fbf]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
             disabled={isLoading}
             required
           />
@@ -227,8 +209,8 @@ const CompactDonorLogin: React.FC<{onLogin: (email: string, password: string) =>
         </button>
         
         <div className="flex justify-between mt-1 text-xs">
-          <a href="/register" className="text-[#1e0fbf] no-underline" onClick={toReg}>Create an account</a>
-          <a href="/login/password-reset" className="text-[#1e0fbf] no-underline" onClick={toPwR}>Forgot password?</a>
+          <a href="/donor/register" className="text-[#1e0fbf] no-underline">Create an account</a>
+          <a href="/donor/forgot-password" className="text-[#1e0fbf] no-underline">Forgot password?</a>
         </div>
       </form>
     </div>
@@ -241,7 +223,6 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const router = useRouter();
   
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -285,7 +266,7 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
       setTimeout(() => {
         console.log('Navigating to governing body dashboard...');
         // Use window.location.assign for a complete page load/refresh
-        window.location.assign('/governBody');
+        window.location.assign('/govern-bodies');
       }, 2000);
     } catch (err) {
       console.error('Login error:', err);
@@ -322,7 +303,7 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-[#1e0fbf]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
             disabled={isLoading}
             required
           />
@@ -338,7 +319,7 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-[#1e0fbf]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
             disabled={isLoading}
             required
           />
@@ -351,17 +332,6 @@ const CompactGovernBodyLogin: React.FC<{onLogin: (email: string, password: strin
         >
           {isLoading ? 'Logging in...' : 'Login'}
         </button>
-        
-        <div className="flex justify-between mt-1 text-xs">
-          <a href="/register" className="text-[#1e0fbf] no-underline" onClick={(e) => {
-            e.preventDefault();
-            router.push('/register');
-          }}>Register governing body</a>
-          <a href="/governBody/forgot-password" className="text-[#1e0fbf] no-underline" onClick={(e) => {
-            e.preventDefault();
-            router.push('/governBody/forgot-password');
-          }}>Forgot password?</a>
-        </div>
       </form>
     </div>
   );
@@ -454,7 +424,7 @@ const CompactSchoolLogin: React.FC<{onLogin: (email: string, password: string) =
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             placeholder="Enter your email"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-[#1e0fbf]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
             disabled={isLoading}
             required
           />
@@ -470,7 +440,7 @@ const CompactSchoolLogin: React.FC<{onLogin: (email: string, password: string) =
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             placeholder="Enter your password"
-            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none text-[#1e0fbf]"
+            className="w-full px-3 py-2 text-sm border border-gray-200 rounded-md outline-none"
             disabled={isLoading}
             required
           />

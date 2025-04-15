@@ -1,13 +1,22 @@
 import mongoose from 'mongoose';
 import { SriLankanProvince, SriLankanDistrict } from '../types/locationTypes';
-import bcrypt from 'bcryptjs'; // Add this import
+import bcrypt from 'bcryptjs';
+
+// Define interface for governing body
+interface IGovernBody extends mongoose.Document {
+  governBodyId: string;
+  name: string;
+  email: string;
+  password: string;
+  // Add other fields as needed
+  comparePassword(candidatePassword: string): Promise<boolean>;
+}
 
 // Governing Body Schema
 const governBodySchema = new mongoose.Schema({
   governBodyId: { type: String, unique: true, index: true },
   name: { type: String, required: true, index: true },
   abbreviation: { type: String, index: true },
-  // Replace the current specializedSport field with:
   specializedSports: [{ 
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Sport',
@@ -19,13 +28,11 @@ const governBodySchema = new mongoose.Schema({
     phone: { type: String, index: true },
     website: { type: String },
   },
-  // Authentication fields
   email: { type: String, required: true, index: true },
-  password: { type: String, required: true, select: false }, // select:false means it won't be returned in queries by default
+  password: { type: String, required: true, }, 
   passwordChangedAt: Date,
   passwordResetToken: String,
   passwordResetExpires: Date,
-  // Add verification fields
   verified: { type: Boolean, default: false },
   verificationToken: { type: String, index: true },
   verificationTokenExpiry: { type: Date },
@@ -53,14 +60,25 @@ governBodySchema.pre('findOneAndUpdate', function() {
 
 // Add this method to your governBodySchema for password comparison
 governBodySchema.methods.comparePassword = async function(candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password);
+  try {
+    console.log('Comparing password for:', this.email);
+    console.log('Candidate password length:', candidatePassword.length);
+    
+    // Use bcrypt.compare which handles the hashing comparison
+    const isMatch = await bcrypt.compare(candidatePassword, this.password);
+    console.log('Password comparison result:', isMatch);
+    
+    return isMatch;
+  } catch (error) {
+    console.error('Error in password comparison:', error);
+    return false;
+  }
 };
 
 // Add pre-save hook for password hashing
 governBodySchema.pre('save', async function(next) {
   const governBody = this as any;
   
-  // Only hash the password if it has been modified or is new
   if (!governBody.isModified('password')) return next();
   
   try {
@@ -73,4 +91,4 @@ governBodySchema.pre('save', async function(next) {
 });
 
 // Export the model, checking if it already exists first
-export default mongoose.models.GovernBody || mongoose.model('GovernBody', governBodySchema);
+export default mongoose.models.GovernBody || mongoose.model<IGovernBody>('GovernBody', governBodySchema);

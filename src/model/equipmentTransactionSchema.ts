@@ -43,7 +43,7 @@ const equipmentTransactionSchema = new mongoose.Schema({
   transactionId: { type: String, unique: true, index: true },
   providerType: { 
     type: String, 
-    enum: ['school', 'governBody'],
+    enum: ['school', 'GovernBody'], // Capital 'G' to match your model name
     required: true
   },
   provider: { 
