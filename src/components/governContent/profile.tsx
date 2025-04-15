@@ -91,7 +91,7 @@ const GovernProfile: React.FC<GovernProfileProps> = ({ donorData: initialData })
             const response = await fetch(`/api/govern?id=${initialData.donorId}`);
 
             if (!response.ok) {
-                throw new Error(`Errorr fetching governing body details: ${response.statusText}`);
+                throw new Error(`Errorr fetchin governing body details: ${response.statusText}`);
             }
 
             const governDetails = await response.json();
