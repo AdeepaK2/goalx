@@ -195,10 +195,16 @@ export async function PATCH(request: NextRequest) {
     
     const body = await request.json();
     
-    // Find by _id or requestId
-    const existingRequest = await EquipmentRequest.findOne({
-      $or: [{ _id: id }, { requestId: id }]
-    });
+    // Create a proper query that avoids ObjectId casting errors
+    const query: any = { requestId: id };
+    
+    // Only add _id to query if it's a valid ObjectId format (24 char hex)
+    if (/^[0-9a-fA-F]{24}$/.test(id)) {
+      query.$or = [{ _id: id }, { requestId: id }];
+    }
+    
+    // Find the request
+    const existingRequest = await EquipmentRequest.findOne(query);
     
     if (!existingRequest) {
       return new NextResponse(JSON.stringify({ error: 'Equipment request not found' }), {
@@ -207,16 +213,12 @@ export async function PATCH(request: NextRequest) {
       });
     }
     
-    // Special handling for status changes
-    if (body.status && body.status !== existingRequest.status) {
-      // If changing to approved, rejected, or partial, need to set processedAt and maybe processedBy
-      if (['approved', 'rejected', 'partial'].includes(body.status)) {
-        body.processedAt = new Date();
-        
-        // Ensure rejection reason is provided if status is 'rejected'
-        if (body.status === 'rejected' && !body.rejectionReason && !existingRequest.rejectionReason) {
+    // Make sure all updated items have valid equipment references
+    if (body.items) {
+      for (const item of body.items) {
+        if (!item.equipment) {
           return new NextResponse(JSON.stringify({ 
-            error: 'Rejection reason is required when rejecting a request' 
+            error: 'Each item must have an equipment reference' 
           }), {
             status: 400,
             headers: { 'Content-Type': 'application/json' }
@@ -225,33 +227,53 @@ export async function PATCH(request: NextRequest) {
       }
     }
     
-    // Update the request
-    const updatedRequest = await EquipmentRequest.findOneAndUpdate(
-      { $or: [{ _id: id }, { requestId: id }] },
-      { $set: body },
-      { new: true, runValidators: true }
-    )
-    .populate('school', 'name schoolId')
-    .populate('items.equipment', 'name equipmentId');
-    
-    return new NextResponse(JSON.stringify(updatedRequest), {
-      status: 200,
-      headers: { 'Content-Type': 'application/json' }
-    });
+    // Update the request with proper validation
+    try {
+      const updatedRequest = await EquipmentRequest.findOneAndUpdate(
+        query,
+        { $set: body },
+        { new: true, runValidators: true }
+      )
+      .populate('school', 'name schoolId')
+      .populate('items.equipment', 'name equipmentId');
+      
+      if (!updatedRequest) {
+        return new NextResponse(JSON.stringify({ error: 'Failed to update equipment request' }), {
+          status: 404,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      
+      return new NextResponse(JSON.stringify(updatedRequest), {
+        status: 200,
+        headers: { 'Content-Type': 'application/json' }
+      });
+    } catch (validationError) {
+      if (validationError instanceof mongoose.Error.ValidationError) {
+        const errorDetails: Record<string, string> = {};
+        
+        // Format validation errors
+        for (const field in validationError.errors) {
+          errorDetails[field] = validationError.errors[field].message;
+        }
+        
+        return new NextResponse(JSON.stringify({ 
+          error: 'Validation error', 
+          details: errorDetails
+        }), {
+          status: 400,
+          headers: { 'Content-Type': 'application/json' }
+        });
+      }
+      throw validationError;
+    }
   } catch (error: any) {
     console.error('Error updating equipment request:', error);
     
-    if (error instanceof mongoose.Error.ValidationError) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Validation error', 
-        details: error.errors 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    return new NextResponse(JSON.stringify({ error: 'Failed to update equipment request' }), {
+    return new NextResponse(JSON.stringify({ 
+      error: 'Failed to update equipment request',
+      message: error.message
+    }), {
       status: 500,
       headers: { 'Content-Type': 'application/json' }
     });
