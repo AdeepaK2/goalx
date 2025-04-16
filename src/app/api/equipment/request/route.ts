@@ -17,6 +17,7 @@ export async function GET(request: NextRequest) {
     const equipmentId = searchParams.get('equipment');
     const startDateFrom = searchParams.get('startDateFrom');
     const startDateTo = searchParams.get('startDateTo');
+    const includeProcessedBy = searchParams.get('include')?.includes('processedBy');
 
     // If ID is provided, fetch specific equipment request
     if (id) {
@@ -57,9 +58,23 @@ export async function GET(request: NextRequest) {
     const limit = parseInt(searchParams.get('limit') || '10');
     const skip = (page - 1) * limit;
 
-    const equipmentRequests = await EquipmentRequest.find(query)
+    const requestsQuery = EquipmentRequest.find(query)
       .populate('school', 'name schoolId')
-      .populate('items.equipment', 'name equipmentId')
+      .populate('items.equipment', 'name equipmentId');
+
+    // Conditionally add processedBy population
+    if (includeProcessedBy) {
+      requestsQuery.populate({
+        path: 'processedBy',
+        select: 'fullName name email governBodyId schoolId',
+        populate: {
+          path: 'governBody school',
+          select: 'name email contact'
+        }
+      });
+    }
+
+    const equipmentRequests = await requestsQuery
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });

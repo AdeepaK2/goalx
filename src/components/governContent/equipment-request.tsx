@@ -310,7 +310,7 @@ const EquipmentRequestComponent: React.FC<EquipmentRequestProps> = ({ governBody
       
       const updatedRequest = await response.json();
       
-      // If approved, create a transaction
+      // If approved, create a transaction using the specialized endpoint
       if (values.status === 'approved') {
         try {
           console.log("governBodyId type:", typeof governBodyId, "value:", governBodyId);
@@ -328,55 +328,56 @@ const EquipmentRequestComponent: React.FC<EquipmentRequestProps> = ({ governBody
             throw new Error('Could not retrieve governing body ID');
           }
 
-          // Create transaction for the approved equipment
-          const transactionData = {
-            providerType: 'governBody',  // Changed from 'GovernBody' to 'governBody'
-            provider: String(governBodyData._id),
-            recipient: String((existingRequest.school as School)._id),
+          // Create specialized transaction data for govern body to school
+          const transactionData: {
+            governBody: string;
+            school: string;
+            transactionType: string;
+            items: any[];
+            status: string;
+            additionalNotes: string;
+            termsAndConditions: string;
+            requestReference: string;
+            rentalDates?: string[];
+            rentalFee?: number;
+          } = {
+            governBody: governBodyData._id,
+            school: (existingRequest.school as School)._id,
             transactionType: values.transactionType || 'permanent',
             items: values.items
               .filter((item: any) => item.quantityApproved > 0)
               .map((item: any) => {
-                // Find the original item from the request to get the equipment reference
-                const originalItem = existingRequest.items.find((reqItem: any) => 
-                  (reqItem.equipment as Equipment)._id === item.equipmentId);
-                  
-                if (!originalItem) {
-                  console.error(`Could not find matching original item for ${item.equipmentId}`);
-                  return null;
-                }
-                  
                 return {
                   equipment: item.equipmentId,
                   quantity: item.quantityApproved,
-                  condition: 'good',
-                  notes: originalItem.notes || `From request ${existingRequest.requestId}`
+                  condition: 'good'
                 };
-              })
-              .filter(Boolean), // Remove any null items
+              }),
             status: 'approved',
             additionalNotes: `Created from equipment request ${existingRequest.requestId}`,
             termsAndConditions: 'Standard equipment loan terms apply',
-            ...(values.transactionType === 'rental' && values.rentalDates ? {
-              rentalDetails: {
-                startDate: values.rentalDates[0].toISOString(),
-                returnDueDate: values.rentalDates[1].toISOString(),
-                rentalFee: values.rentalFee || 0
-              }
-            } : {})
+            requestReference: existingRequest.requestId // Track relationship to original request
           };
 
-          // Before sending the transaction request
+          // Add rental details if applicable
+          if (values.transactionType === 'rental' && values.rentalDates) {
+            transactionData.rentalDates = [
+              values.rentalDates[0].toISOString(),
+              values.rentalDates[1].toISOString()
+            ];
+            transactionData.rentalFee = values.rentalFee || 0;
+          }
+
           console.log("Transaction data to send:", JSON.stringify(transactionData, null, 2));
 
-          // Create the transaction
-          const transactionResponse = await fetch('/api/equipment/transaction', {
+          // Use the specialized endpoint for govern body to school transactions
+          const transactionResponse = await fetch('/api/equipment/transaction/govern', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(transactionData)
           });
 
-          // Get the detailed error message
+          // Get the detailed error message if there's an issue
           if (!transactionResponse.ok) {
             const transactionError = await transactionResponse.json();
             console.error("Transaction error details:", transactionError);

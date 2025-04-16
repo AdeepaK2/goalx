@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiBox, FiPlus, FiX, FiLoader, FiTrash2 } from "react-icons/fi";
+import { FiBox, FiPlus, FiX, FiLoader, FiTrash2, FiPhone, FiMail, FiInfo } from "react-icons/fi";
 
 interface EquipmentRequest {
   _id: string;
@@ -17,6 +17,25 @@ interface EquipmentRequest {
       equipmentId: string;
     };
     quantityRequested: number;
+    quantityApproved?: number;
+  }>;
+  processedBy?: {
+    _id: string;
+    name?: string;
+    fullName?: string;
+    email?: string;
+    type: 'school' | 'governBody' | 'admin';
+    entityId?: string;
+  };
+  approvedItems?: Array<{
+    equipment: {
+      _id: string;
+      name: string;
+      equipmentId: string;
+    };
+    quantity: number;
+    condition: string;
+    transactionId?: string;
   }>;
 }
 
@@ -78,6 +97,18 @@ const Requests = () => {
   const [submitError, setSubmitError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
 
+  const [contactModalVisible, setContactModalVisible] = useState(false);
+  const [currentApprover, setCurrentApprover] = useState<{
+    name: string;
+    email?: string;
+    phone?: string;
+    type: string;
+    website?: string;
+    address?: string;
+  } | null>(null);
+  const [loadingContact, setLoadingContact] = useState(false);
+  const [contactError, setContactError] = useState<string | null>(null);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -96,7 +127,7 @@ const Requests = () => {
           throw new Error('No school ID found');
         }
         
-        const requestsResponse = await fetch(`/api/equipment/request?school=${schoolId}`);
+        const requestsResponse = await fetch(`/api/equipment/request?school=${schoolId}&include=processedBy,approvedItems`);
         if (!requestsResponse.ok) {
           throw new Error('Failed to fetch equipment requests');
         }
@@ -112,7 +143,21 @@ const Requests = () => {
           eventStartDate: request.eventStartDate ? new Date(request.eventStartDate).toISOString().split('T')[0] : undefined,
           eventEndDate: request.eventEndDate ? new Date(request.eventEndDate).toISOString().split('T')[0] : undefined,
           eventDescription: request.eventDescription,
-          items: request.items || []
+          items: request.items || [],
+          processedBy: request.processedBy ? {
+            _id: request.processedBy._id,
+            name: request.processedBy.name || request.processedBy.fullName,
+            email: request.processedBy.email,
+            type: request.processedBy.governBodyId ? 'governBody' : 
+                  request.processedBy.schoolId ? 'school' : 'admin',
+            entityId: request.processedBy.governBodyId || request.processedBy.schoolId || request.processedBy._id
+          } : undefined,
+          approvedItems: Array.isArray(request.approvedItems) ? request.approvedItems.map((item: any) => ({
+            equipment: item.equipment,
+            quantity: item.quantity,
+            condition: item.condition,
+            transactionId: item.transactionId
+          })) : []
         })) || [];
         
         setEquipmentRequests(formattedRequests);
@@ -352,6 +397,115 @@ const Requests = () => {
     setSubmitError(null);
   };
 
+  const fetchContactDetails = async (request: EquipmentRequest) => {
+    // Reset state
+    setLoadingContact(true);
+    setContactError(null);
+    
+    try {
+      let entityId: string | undefined;
+      let entityType: string | undefined;
+      let transactionId: string | undefined;
+      
+      // First check if the approval is linked to a transaction
+      if (request.approvedItems && request.approvedItems.length > 0) {
+        // Get the transaction ID from the first approved item (if available)
+        transactionId = request.approvedItems[0].transactionId;
+        
+        if (transactionId) {
+          // Check if it's a governing body transaction (starts with 'GRT' or 'GTF')
+          if (transactionId.startsWith('GRT') || transactionId.startsWith('GTF')) {
+            // Fetch from govern transaction API
+            const transResponse = await fetch(`/api/equipment/transaction/govern?id=${transactionId}`);
+            
+            if (!transResponse.ok) {
+              throw new Error('Failed to fetch transaction information');
+            }
+            
+            const transaction = await transResponse.json();
+            
+            if (transaction && transaction.governBody) {
+              entityId = typeof transaction.governBody === 'string' 
+                ? transaction.governBody 
+                : transaction.governBody._id;
+              entityType = 'governBody';
+            }
+          } else if (transactionId.startsWith('RNT') || transactionId.startsWith('TRF')) {
+            // Fetch from general transaction API
+            const transResponse = await fetch(`/api/equipment/transaction?id=${transactionId}`);
+            
+            if (!transResponse.ok) {
+              throw new Error('Failed to fetch transaction information');
+            }
+            
+            const transaction = await transResponse.json();
+            
+            if (transaction && transaction.provider) {
+              entityId = typeof transaction.provider === 'string' 
+                ? transaction.provider 
+                : transaction.provider._id;
+              entityType = transaction.providerType === 'school' ? 'school' : 'governBody';
+            }
+          }
+        }
+      }
+      
+      // If we couldn't get entity info from transaction, use the processedBy field
+      if (!entityId && request.processedBy) {
+        entityId = request.processedBy.entityId;
+        entityType = request.processedBy.type;
+      }
+      
+      if (!entityId || !entityType) {
+        throw new Error('No contact information available');
+      }
+      
+      // Use the appropriate API based on entity type
+      let endpoint = '';
+      if (entityType === 'school') {
+        endpoint = `/api/school?id=${entityId}`;
+      } else if (entityType === 'governBody') {
+        endpoint = `/api/govern?id=${entityId}`;
+      } else {
+        throw new Error('Unknown entity type');
+      }
+      
+      const response = await fetch(endpoint);
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch contact information');
+      }
+      
+      const data = await response.json();
+      
+      // Format contact data based on entity type
+      if (entityType === 'school') {
+        setCurrentApprover({
+          name: data.name,
+          email: data.contact?.email,
+          phone: data.contact?.phone,
+          type: 'School',
+          address: [data.location?.district, data.location?.province].filter(Boolean).join(', ')
+        });
+      } else {
+        setCurrentApprover({
+          name: data.name,
+          email: data.email,
+          phone: data.contact?.phone,
+          type: 'Governing Body',
+          website: data.contact?.website
+        });
+      }
+      
+      setContactModalVisible(true);
+    } catch (error: any) {
+      console.error('Error fetching contact details:', error);
+      setContactError(error.message || 'Failed to fetch contact information');
+    } finally {
+      setLoadingContact(false);
+    }
+  };
+
   const getStatusColor = (status: string) => {
     switch(status.toLowerCase()) {
       case 'approved':
@@ -448,6 +602,58 @@ const Requests = () => {
                             </p>
                           )}
                           <p>Requested on: {formatDate(request.requestDate)}</p>
+                          
+                          {request.status === 'approved' && (
+                            <div className="mt-2 py-1 px-2 bg-blue-50 rounded-md">
+                              {request.approvedItems && request.approvedItems.length > 0 ? (
+                                <div className="text-sm">
+                                  <p>
+                                    <span className="font-medium">Approved items:</span> {request.approvedItems.length}
+                                  </p>
+                                  <div className="flex items-center justify-between mt-1">
+                                    <span>
+                                      {request.processedBy?.name && (
+                                        <>Approved by: {request.processedBy.name}</>
+                                      )}
+                                    </span>
+                                    <button 
+                                      onClick={() => fetchContactDetails(request)} 
+                                      className="text-blue-500 hover:text-blue-700 flex items-center text-xs border border-blue-200 py-1 px-2 rounded"
+                                      disabled={loadingContact}
+                                    >
+                                      {loadingContact ? (
+                                        <FiLoader className="animate-spin mr-1" size={12} />
+                                      ) : (
+                                        <FiPhone className="mr-1" size={12} />
+                                      )}
+                                      Contact Provider
+                                    </button>
+                                  </div>
+                                </div>
+                              ) : (
+                                <p className="flex items-center justify-between">
+                                  <span>
+                                    Approved by: {request.processedBy?.name || 'Unknown'} 
+                                    {request.processedBy?.type === 'governBody' ? ' (Governing Body)' : 
+                                    request.processedBy?.type === 'school' ? ' (School)' : ''}
+                                  </span>
+                                  
+                                  <button 
+                                    onClick={() => fetchContactDetails(request)} 
+                                    className="ml-2 text-blue-500 hover:text-blue-700 flex items-center text-xs border border-blue-200 py-0.5 px-1.5 rounded"
+                                    disabled={loadingContact}
+                                  >
+                                    {loadingContact ? (
+                                      <FiLoader className="animate-spin mr-1" size={12} />
+                                    ) : (
+                                      <FiPhone className="mr-1" size={12} />
+                                    )}
+                                    Contact
+                                  </button>
+                                </p>
+                              )}
+                            </div>
+                          )}
                         </div>
                       </div>
                     ))
@@ -690,6 +896,102 @@ const Requests = () => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {contactModalVisible && (
+        <div className="fixed inset-0 backdrop-blur bg-opacity-50 bg-black overflow-y-auto h-full w-full z-50 flex items-center justify-center">
+          <div className="relative bg-white rounded-lg shadow-xl max-w-md w-full mx-4 md:mx-auto my-8">
+            <div className="flex justify-between items-center border-b border-gray-200 px-6 py-4">
+              <h3 className="text-lg font-medium text-gray-900">
+                Equipment Provider Contact
+              </h3>
+              <button
+                onClick={() => setContactModalVisible(false)}
+                className="text-gray-400 hover:text-gray-500"
+              >
+                <FiX className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="px-6 py-4">
+              {contactError ? (
+                <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-center">
+                  {contactError}
+                </div>
+              ) : currentApprover ? (
+                <div className="space-y-4">
+                  <div className="border-b pb-2">
+                    <h4 className="font-medium text-[#1e0fbf]">{currentApprover.name}</h4>
+                    <p className="text-sm text-gray-500">{currentApprover.type}</p>
+                  </div>
+                  
+                  <div className="space-y-2">
+                    {currentApprover.email && (
+                      <div className="flex items-center">
+                        <FiMail className="text-gray-500 mr-2" />
+                        <a href={`mailto:${currentApprover.email}`} className="text-blue-600 hover:underline">
+                          {currentApprover.email}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {currentApprover.phone && (
+                      <div className="flex items-center">
+                        <FiPhone className="text-gray-500 mr-2" />
+                        <a href={`tel:${currentApprover.phone}`} className="text-blue-600 hover:underline">
+                          {currentApprover.phone}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {currentApprover.website && (
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        <a href={currentApprover.website.startsWith('http') ? currentApprover.website : `https://${currentApprover.website}`} 
+                           className="text-blue-600 hover:underline" 
+                           target="_blank"
+                           rel="noopener noreferrer">
+                          {currentApprover.website}
+                        </a>
+                      </div>
+                    )}
+                    
+                    {currentApprover.address && (
+                      <div className="flex items-center">
+                        <svg className="w-4 h-4 text-gray-500 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                        </svg>
+                        <span className="text-gray-700">{currentApprover.address}</span>
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="pt-2 text-sm text-gray-500 italic text-center">
+                    This is the contact information for the {currentApprover.type} that provided your approved equipment.
+                  </div>
+                </div>
+              ) : (
+                <div className="flex justify-center items-center p-8">
+                  <FiLoader className="animate-spin text-[#6e11b0] mr-2" size={20} />
+                  <span>Loading contact information...</span>
+                </div>
+              )}
+            </div>
+
+            <div className="bg-gray-50 px-6 py-3 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setContactModalVisible(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 focus:outline-none"
+              >
+                Close
+              </button>
+            </div>
           </div>
         </div>
       )}

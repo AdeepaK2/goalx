@@ -2,6 +2,7 @@
 import React, { useState, useEffect } from "react";
 import axios from "axios";
 import Link from "next/link";
+import EquipmentRequestHelpModal from "../modals/EquipmentRequestHelpModal";
 
 interface Equipment {
   _id: string;
@@ -45,90 +46,89 @@ const Inquiries: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
 
-  useEffect(() => {
-    // Fetch current school info similar to dashboard component
-    const fetchSchoolInfo = async () => {
-      try {
-        const response = await axios.get('/api/auth/school/me');
-        
-        if (!response.data?.school || !response.data?.school.id) {
-          console.error('Invalid school info response:', response.data);
-          throw new Error('Failed to fetch school info');
-        }
-        
-        console.log('School info fetched successfully:', response.data.school.id);
-        
-        // Now fetch full school details
-        const schoolResponse = await axios.get(`/api/school?id=${response.data.school.id}`);
-        console.log('Full school details:', schoolResponse.data);
-        
-        // Make sure we have a valid school object with location
-        if (!schoolResponse.data || !schoolResponse.data.location) {
-          throw new Error('School details missing or incomplete');
-        }
-        
-        setCurrentSchool(schoolResponse.data);
-        return schoolResponse.data;
-      } catch (err) {
-        console.error('Error fetching school info:', err);
-        setError("Failed to fetch your school information");
-        setLoading(false);
-        return null;
-      }
-    };
+  // Modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [selectedRequestId, setSelectedRequestId] = useState<string | null>(null);
 
-    // Fetch equipment requests from nearby schools
-    const fetchRequests = async (school: School) => {
-      if (!school?.location?.district) {
-        console.error('Cannot fetch equipment requests: School district is undefined');
-        setError("School district information is missing");
-        setLoading(false);
-        return;
-      }
+  // Function to open the modal with a specific request
+  const openHelpModal = (requestId: string) => {
+    setSelectedRequestId(requestId);
+    setModalOpen(true);
+  };
+
+  // Function to fetch school information
+  const fetchSchoolInfo = async () => {
+    try {
+      const response = await axios.get("/api/school/current");
+      const schoolData = response.data.school;
+      setCurrentSchool(schoolData);
+      return schoolData;
+    } catch (err: any) {
+      console.error("Failed to fetch school info:", err);
+      setError(`Failed to load school information: ${err.message || 'Unknown error'}`);
+      return null;
+    }
+  };
+
+  // Fetch equipment requests from nearby schools
+  const fetchRequests = async (school: School) => {
+    if (!school?.location?.district) {
+      console.error('Cannot fetch equipment requests: School district is undefined');
+      setError("School district information is missing");
+      setLoading(false);
+      return;
+    }
+    
+    try {
+      console.log('Fetching equipment requests...');
       
-      try {
-        console.log('Fetching equipment requests...');
-        
-        // Fetch equipment requests specifically for the same district
-        const response = await axios.get("/api/equipment/request", {
-          params: {
-            status: "pending",
-            district: school.location.district, // Add district parameter
-            limit: 50
-          }
-        });
-
-        console.log('Equipment requests response:', response.data);
-        
-        if (response.data && Array.isArray(response.data.equipmentRequests)) {
-          // Filter out requests from the current school
-          const districtRequests = response.data.equipmentRequests.filter(
-            (req: EquipmentRequest) => {
-              // Skip if missing data
-              if (!req.school || !req.school._id) {
-                console.warn('Skipping request with incomplete school data:', req._id);
-                return false;
-              }
-              
-              // Only include requests NOT from the current school
-              return req.school._id !== school._id;
-            }
-          );
-          
-          console.log(`Found ${districtRequests.length} requests from schools in the same district`);
-          setRequests(districtRequests);
-        } else {
-          console.error('Invalid equipment requests response format:', response.data);
-          setError("Invalid response format from server");
+      // Fetch equipment requests specifically for the same district
+      const response = await axios.get("/api/equipment/request", {
+        params: {
+          status: "pending",
+          district: school.location.district, // Add district parameter
+          limit: 50
         }
-      } catch (err: any) {
-        console.error("Failed to fetch equipment requests:", err);
-        setError(`Failed to load equipment requests: ${err.message || 'Unknown error'}`);
-      } finally {
-        setLoading(false);
-      }
-    };
+      });
 
+      console.log('Equipment requests response:', response.data);
+      
+      if (response.data && Array.isArray(response.data.equipmentRequests)) {
+        // Filter out requests from the current school
+        const districtRequests = response.data.equipmentRequests.filter(
+          (req: EquipmentRequest) => {
+            // Skip if missing data
+            if (!req.school || !req.school._id) {
+              console.warn('Skipping request with incomplete school data:', req._id);
+              return false;
+            }
+            
+            // Only include requests NOT from the current school
+            return req.school._id !== school._id;
+          }
+        );
+        
+        console.log(`Found ${districtRequests.length} requests from schools in the same district`);
+        setRequests(districtRequests);
+      } else {
+        console.error('Invalid equipment requests response format:', response.data);
+        setError("Invalid response format from server");
+      }
+    } catch (err: any) {
+      console.error("Failed to fetch equipment requests:", err);
+      setError(`Failed to load equipment requests: ${err.message || 'Unknown error'}`);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleHelpSuccess = () => {
+    setModalOpen(false);
+    // Reload the requests after successful help
+    if (currentSchool) fetchRequests(currentSchool);
+  };
+
+  useEffect(() => {
     // Execute fetch operations
     const loadData = async () => {
       const schoolData = await fetchSchoolInfo();
@@ -248,19 +248,29 @@ const Inquiries: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
-              </div>
-              
-              <div className="mt-6 flex justify-end">
-                <Link 
-                  href={`/schools/equipment-request/${request.requestId}`}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition duration-200"
-                >
-                  View Details & Help
-                </Link>
-              </div>
-            </div>
+        </div>
+        
+        <div className="mt-4">
+          <button
+            onClick={() => openHelpModal(request._id)}
+            className="bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md text-sm font-medium"
+          >
+            Help with this Request
+          </button>
+        </div>
+      </div>
           ))}
         </div>
+      )}
+      
+      {/* Modal for helping with equipment */}
+      {selectedRequestId && (
+        <EquipmentRequestHelpModal
+          requestId={selectedRequestId}
+          isOpen={modalOpen}
+          onClose={() => setModalOpen(false)}
+          onSuccess={handleHelpSuccess}
+        />
       )}
     </div>
   );
