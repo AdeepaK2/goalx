@@ -7,8 +7,10 @@ interface DonationItem {
   donationType: string;
   status: string;
   donor: {
+    _id?: string;
+    donorId?: string;
     displayName: string;
-    email?: string; // Added email field to the interface
+    // Remove email from here since we'll fetch it separately
   };
   itemDetails?: Array<{
     itemName: string;
@@ -80,41 +82,62 @@ const Donations = () => {
   };
 
   // Function to handle thanking a donor via email
-  const handleThankDonor = (donation: DonationItem) => {
-    if (!donation.donor.email) {
-      alert("Sorry, no email address is available for this donor.");
-      return;
-    }
-    
-    const subject = encodeURIComponent(`Thank you for your donation to our school`);
-    const body = encodeURIComponent(
-      `Dear ${donation.donor.displayName},\n\n` +
-      `Thank you for your generous ${donation.donationType.toLowerCase()} donation ` +
-      `(${formatDonationItem(donation)}) to our school. ` +
-      `Your support makes a significant difference for our students and sports programs.\n\n` +
-      `Sincerely,\n` +
-      `School Administration`
-    );
-    
-    const mailtoLink = `mailto:${donation.donor.email}?subject=${subject}&body=${body}`;
-    
-    // Try to open the email client in a new window
-    const emailWindow = window.open(mailtoLink, '_blank');
-    
-    // If opening failed (blocked by browser or returned null)
-    if (!emailWindow || emailWindow.closed || typeof emailWindow.closed === 'undefined') {
-      // Fallback method - create a temporary link and click it
-      const link = document.createElement('a');
-      link.href = mailtoLink;
-      link.target = '_blank';
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+  const handleThankDonor = async (donation: DonationItem) => {
+    try {
+      // Show loading indicator or disable button
+      // First fetch donor details to get email
+      const donorId = donation.donor._id || donation.donor.donorId;
+      if (!donorId) {
+        alert("Cannot identify the donor. Thank you action not possible.");
+        return;
+      }
       
-      // If still having issues, alert the user with instructions
-      setTimeout(() => {
-        alert("If your email client didn't open automatically, please copy this donor's email address and send a thank you message manually: " + donation.donor.email);
-      }, 1000);
+      // Fetch donor details to get their email
+      const response = await fetch(`/api/donor?id=${donorId}`);
+      if (!response.ok) {
+        throw new Error("Failed to fetch donor details");
+      }
+      
+      const donorData = await response.json();
+      
+      if (!donorData.email) {
+        alert("Sorry, no email address is available for this donor.");
+        return;
+      }
+      
+      const subject = encodeURIComponent(`Thank you for your donation to our school`);
+      const body = encodeURIComponent(
+        `Dear ${donation.donor.displayName},\n\n` +
+        `Thank you for your generous ${donation.donationType.toLowerCase()} donation ` +
+        `(${formatDonationItem(donation)}) to our school. ` +
+        `Your support makes a significant difference for our students and sports programs.\n\n` +
+        `Sincerely,\n` +
+        `School Administration`
+      );
+      
+      const mailtoLink = `mailto:${donorData.email}?subject=${subject}&body=${body}`;
+      
+      // Try to open the email client in a new window
+      const emailWindow = window.open(mailtoLink, '_blank');
+      
+      // If opening failed (blocked by browser or returned null)
+      if (!emailWindow || emailWindow.closed || typeof emailWindow.closed === 'undefined') {
+        // Fallback method - create a temporary link and click it
+        const link = document.createElement('a');
+        link.href = mailtoLink;
+        link.target = '_blank';
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        // If still having issues, alert the user with instructions
+        setTimeout(() => {
+          alert("If your email client didn't open automatically, please copy this donor's email address and send a thank you message manually: " + donorData.email);
+        }, 1000);
+      }
+    } catch (error) {
+      console.error("Error sending thank you email:", error);
+      alert("Failed to send thank you email. Please try again later.");
     }
   };
 
@@ -176,8 +199,7 @@ const Donations = () => {
                       <button
                         onClick={() => handleThankDonor(donation)}
                         className="px-3 py-1 bg-[#6e11b0] text-white rounded-md flex items-center hover:bg-[#5a0e91] transition-colors"
-                        disabled={!donation.donor.email}
-                        title={donation.donor.email ? "Send thank you email" : "No email available"}
+                        title="Send thank you email"
                       >
                         <FiMail className="mr-1" /> Thank Donor
                       </button>

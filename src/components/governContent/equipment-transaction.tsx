@@ -1,44 +1,59 @@
+'use client';
+
 import React, { useState, useEffect } from 'react';
-import { FiPackage, FiFilter, FiSearch, FiArrowLeft, FiExternalLink } from 'react-icons/fi';
-import { format, isAfter, isBefore } from 'date-fns';
-import { Pagination } from '@mui/material';
+import { Button, Card, Divider, Select, Spin, Table, Tag, Modal, Input, DatePicker, message } from 'antd';
+import { SearchOutlined, FilterOutlined, EyeOutlined, EditOutlined } from '@ant-design/icons';
+import dayjs from 'dayjs';
 import Link from 'next/link';
 
+const { Option } = Select;
+const { RangePicker } = DatePicker;
+
+// Define interface for Equipment
+interface Equipment {
+  _id: string;
+  equipmentId: string;
+  name: string;
+  description?: string;
+}
+
+// Define interface for School
+interface School {
+  _id: string;
+  schoolId: string;
+  name: string;
+  district?: string;
+}
+
+// Define interface for Transaction Items
 interface TransactionItem {
-  equipment: {
-    _id: string;
-    name: string;
-    equipmentId: string;
-  };
+  equipment: Equipment;
   quantity: number;
   condition: string;
   notes?: string;
 }
 
+// Define interface for Transaction
 interface Transaction {
   _id: string;
   transactionId: string;
-  providerType: 'school' | 'GovernBody';
-  provider: {
-    _id: string;
-    name: string;
-  };
-  recipient: {
-    _id: string;
-    name: string;
-    schoolId: string;
-  };
-  transactionType: 'rental' | 'permanent';
+  governBody: any;  // Reference to govern body
+  school: School;
+  transactionType: 'permanent' | 'rental';
   items: TransactionItem[];
+  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'returned';
+  additionalNotes?: string;
+  requestReference?: string;
   rentalDetails?: {
     startDate: string;
     returnDueDate: string;
     returnedDate?: string;
     rentalFee?: number;
   };
-  status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'returned';
   createdAt: string;
   updatedAt: string;
+  approvedAt?: string;
+  approvedBy?: any;
 }
 
 interface TransactionProps {
@@ -48,11 +63,12 @@ interface TransactionProps {
 
 const EquipmentTransaction: React.FC<TransactionProps> = ({ governBodyId, donorData }) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [govBodyId, setGovBodyId] = useState<string | null>(null);
-  const [mongoId, setMongoId] = useState<string | null>(null);
+  const [detailModalVisible, setDetailModalVisible] = useState<boolean>(false);
+  const [govBodyMongoId, setGovBodyMongoId] = useState<string | null>(null);
   
   // Pagination state
   const [pagination, setPagination] = useState({
@@ -64,59 +80,120 @@ const EquipmentTransaction: React.FC<TransactionProps> = ({ governBodyId, donorD
   
   // Filter state
   const [filters, setFilters] = useState({
-    status: '',
+    status: 'approved',
     transactionType: '',
-    searchTerm: ''
+    searchTerm: '',
+    dateRange: [null, null] as [dayjs.Dayjs | null, dayjs.Dayjs | null]
   });
 
   useEffect(() => {
     if (governBodyId) {
-      setGovBodyId(governBodyId);
-      fetchGovernBodyMongoId();
+      fetchGovernBodyMongoId(governBodyId);
     } else if (donorData?.donorId) {
-      setGovBodyId(donorData.donorId);
-      fetchGovernBodyMongoId();
+      fetchGovernBodyMongoId(donorData.donorId);
+    } else {
+      fetchCurrentGovernBody();
     }
   }, [governBodyId, donorData]);
 
-  const fetchGovernBodyMongoId = async () => {
+  // Fetch the MongoDB _id for the governing body using the governBodyId
+  const fetchGovernBodyMongoId = async (id: string) => {
     try {
-      const id = governBodyId || donorData?.donorId;
-      if (!id) return;
+      console.log(`Fetching govern body with ID: ${id}`);
       
+      setLoading(true);
       const response = await fetch(`/api/govern?id=${id}`);
+      
       if (!response.ok) {
-        throw new Error('Failed to fetch governing body data');
+        throw new Error(`Failed to fetch governing body data: ${response.statusText}`);
       }
       
       const govData = await response.json();
+      console.log("Govern body data:", govData);
+      
       if (govData && govData._id) {
-        setMongoId(govData._id);
-        fetchTransactions(govData._id);
+        setGovBodyMongoId(govData._id);
+      } else {
+        throw new Error('Governing body data missing MongoDB ID');
       }
     } catch (err) {
       console.error("Error fetching governing body:", err);
-      setError('Failed to load governing body information');
+      setError(err instanceof Error ? err.message : 'Failed to load governing body information');
       setLoading(false);
     }
   };
 
-  const fetchTransactions = async (providerId: string) => {
+  // Add this function to get current governing body from auth
+  const fetchCurrentGovernBody = async () => {
     try {
       setLoading(true);
+      const response = await fetch('/api/auth/govern/me');
       
-      let url = `/api/equipment/transaction?provider=${providerId}&providerType=GovernBody&page=${pagination.page}&limit=${pagination.limit}`;
+      if (!response.ok) {
+        throw new Error('Failed to fetch authenticated governing body');
+      }
       
+      const data = await response.json();
+      console.log("Current govern body data:", data);
+      
+      if (data.success && data.governBody) {
+        setGovBodyMongoId(data.governBody.id); // This is the MongoDB _id
+        return;
+      }
+      
+      throw new Error('No governing body found in authentication data');
+    } catch (err) {
+      console.error("Error fetching current governing body:", err);
+      setError(err instanceof Error ? err.message : 'Authentication error');
+      setLoading(false);
+    }
+  };
+
+  // Fetch transactions after we have the MongoDB _id
+  useEffect(() => {
+    if (govBodyMongoId) {
+      fetchTransactions();
+    }
+  }, [govBodyMongoId, pagination.page, filters]);
+
+  const fetchTransactions = async () => {
+    try {
+      setLoading(true);
+      console.log(`Fetching transactions for govern body: ${govBodyMongoId}`);
+      
+      let url = `/api/equipment/transaction/govern?governBody=${govBodyMongoId}&page=${pagination.page}&limit=${pagination.limit}`;
+      
+      // Add filters to the URL
       if (filters.status) url += `&status=${filters.status}`;
       if (filters.transactionType) url += `&transactionType=${filters.transactionType}`;
       
+      // Add date range filters if set
+      if (filters.dateRange[0] && filters.dateRange[1]) {
+        const startDate = filters.dateRange[0].startOf('day').toISOString();
+        const endDate = filters.dateRange[1].endOf('day').toISOString();
+        
+        if (filters.transactionType === 'rental') {
+          url += `&startDateFrom=${startDate}&startDateTo=${endDate}`;
+        } else {
+          // For non-rental transactions, filter by creation date
+          url += `&createdFrom=${startDate}&createdTo=${endDate}`;
+        }
+      }
+      
+      console.log(`Request URL: ${url}`);
+      
       const response = await fetch(url);
+      
       if (!response.ok) {
         throw new Error(`Error fetching transactions: ${response.statusText}`);
       }
       
       const data = await response.json();
+      console.log("Transactions data:", data);
+      
+      // Set the transactions and update pagination
       setTransactions(data.transactions || []);
+      setFilteredTransactions(data.transactions || []);
       setPagination({
         ...pagination,
         total: data.pagination?.total || 0,
@@ -131,343 +208,394 @@ const EquipmentTransaction: React.FC<TransactionProps> = ({ governBodyId, donorD
     }
   };
 
+  // Apply client-side filtering for the search term
   useEffect(() => {
-    if (mongoId) {
-      fetchTransactions(mongoId);
+    if (filters.searchTerm && transactions.length > 0) {
+      const searchTerm = filters.searchTerm.toLowerCase();
+      const filtered = transactions.filter(transaction => {
+        return (
+          transaction.transactionId.toLowerCase().includes(searchTerm) ||
+          transaction.school.name.toLowerCase().includes(searchTerm) ||
+          (transaction.requestReference && transaction.requestReference.toLowerCase().includes(searchTerm)) ||
+          transaction.items.some(item => item.equipment.name.toLowerCase().includes(searchTerm))
+        );
+      });
+      setFilteredTransactions(filtered);
+    } else {
+      setFilteredTransactions(transactions);
     }
-  }, [pagination.page, filters, mongoId]);
+  }, [filters.searchTerm, transactions]);
 
-  const handlePageChange = (_: React.ChangeEvent<unknown>, value: number) => {
-    setPagination(prev => ({ ...prev, page: value }));
+  const handlePageChange = (page: number) => {
+    setPagination({
+      ...pagination,
+      page
+    });
   };
 
-  const handleFilterChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const { name, value } = e.target;
-    setFilters(prev => ({ ...prev, [name]: value }));
-    setPagination(prev => ({ ...prev, page: 1 })); // Reset to first page on filter change
+  const handleFilterChange = (filterName: string, value: any) => {
+    setFilters({
+      ...filters,
+      [filterName]: value
+    });
+    // Reset to first page when filters change
+    setPagination({
+      ...pagination,
+      page: 1
+    });
   };
 
-  const formatDate = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'MMM d, yyyy');
-    } catch (e) {
-      return 'Invalid date';
+  const handleViewDetails = (transaction: Transaction) => {
+    setSelectedTransaction(transaction);
+    setDetailModalVisible(true);
+  };
+
+  const formatDate = (dateString?: string) => {
+    if (!dateString) return 'N/A';
+    return dayjs(dateString).format('MMM D, YYYY');
+  };
+
+  const getStatusTag = (status: string) => {
+    let color = '';
+    switch (status) {
+      case 'pending': color = 'gold'; break;
+      case 'approved': color = 'green'; break;
+      case 'rejected': color = 'red'; break;
+      case 'completed': color = 'blue'; break;
+      case 'cancelled': color = 'orange'; break;
+      case 'returned': color = 'purple'; break;
+      default: color = 'default';
     }
+    return <Tag color={color}>{status.toUpperCase()}</Tag>;
   };
 
-  // Get appropriate status display and style
-  const getStatusClass = (status: string, dueDate?: string) => {
-    if (status === 'returned' || status === 'completed') return 'bg-green-100 text-green-800';
-    if (status === 'rejected' || status === 'cancelled') return 'bg-red-100 text-red-800';
-    if (status === 'pending') return 'bg-yellow-100 text-yellow-800';
-    if (status === 'approved') {
-      // For rentals, check if past due date
-      if (dueDate && isAfter(new Date(), new Date(dueDate))) {
-        return 'bg-red-100 text-red-800';
-      }
-      return 'bg-blue-100 text-blue-800';
+  const columns = [
+    {
+      title: 'Transaction ID',
+      dataIndex: 'transactionId',
+      key: 'transactionId',
+      render: (text: string) => <span className="font-medium">{text}</span>
+    },
+    {
+      title: 'School',
+      dataIndex: 'school',
+      key: 'school',
+      render: (school: School) => <span>{school.name}</span>
+    },
+    {
+      title: 'Type',
+      dataIndex: 'transactionType',
+      key: 'transactionType',
+      render: (type: string) => (
+        <Tag color={type === 'rental' ? 'blue' : 'green'}>
+          {type.toUpperCase()}
+        </Tag>
+      )
+    },
+    {
+      title: 'Status',
+      dataIndex: 'status',
+      key: 'status',
+      render: (status: string) => getStatusTag(status)
+    },
+    {
+      title: 'Items',
+      key: 'items',
+      render: (text: string, record: Transaction) => (
+        <span>{record.items.length} item(s)</span>
+      )
+    },
+    {
+      title: 'Date',
+      dataIndex: 'createdAt',
+      key: 'createdAt',
+      render: (date: string) => formatDate(date)
+    },
+    {
+      title: 'Actions',
+      key: 'actions',
+      render: (text: string, record: Transaction) => (
+        <div className="space-x-2">
+          <Button 
+            size="small" 
+            icon={<EyeOutlined />} 
+            onClick={() => handleViewDetails(record)}
+          >
+            View
+          </Button>
+          
+          {record.status === 'approved' && (
+            <Button 
+              size="small" 
+              type="primary"
+              icon={<EditOutlined />}
+              onClick={() => {
+                message.info("Update functionality will be implemented soon");
+              }}
+            >
+              Update
+            </Button>
+          )}
+        </div>
+      )
     }
-    return 'bg-gray-100 text-gray-800';
-  };
+  ];
 
-  const getStatusText = (status: string, dueDate?: string) => {
-    if (status === 'approved' && dueDate && isAfter(new Date(), new Date(dueDate))) {
-      return 'Overdue';
-    }
-    return status.charAt(0).toUpperCase() + status.slice(1);
-  };
-
-  // Calculate total items across transactions
-  const totalItems = transactions.reduce((sum, transaction) => {
-    return sum + transaction.items.reduce((itemSum, item) => itemSum + item.quantity, 0);
-  }, 0);
+  if (loading && !transactions.length) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Spin size="large" />
+      </div>
+    );
+  }
 
   if (error) {
     return (
-      <div className="py-8 px-4 text-center">
+      <div className="p-4 text-center">
         <div className="bg-red-50 border border-red-200 rounded-lg p-6">
           <h3 className="text-lg font-medium text-red-800 mb-2">Error Loading Transactions</h3>
           <p className="text-red-600">{error}</p>
-          <button 
-            onClick={() => mongoId && fetchTransactions(mongoId)} 
+          <Button 
+            onClick={() => {
+              setError(null);
+              if (governBodyId) fetchGovernBodyMongoId(governBodyId);
+            }} 
             className="mt-4 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
           >
             Try Again
-          </button>
+          </Button>
         </div>
       </div>
     );
   }
 
   return (
-    <div>
-      {/* Hero Section */}
-      <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
-        <div className="max-w-5xl mx-auto">
-          <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
-            Equipment Transactions
-          </h1>
-          <p className="text-blue-100 text-xl mt-4 text-center max-w-2xl mx-auto">
-            Manage equipment transfers and rentals to schools across Sri Lanka.
-          </p>
+    <div className="container mx-auto p-4">
+      <div className="mb-8 bg-gradient-to-r from-blue-800 to-blue-600 rounded-lg p-8 shadow-lg">
+        <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
+          Equipment Transactions
+        </h1>
+        <p className="text-blue-100 text-xl mt-4 text-center max-w-2xl mx-auto">
+          Track and manage equipment transactions with schools across Sri Lanka.
+        </p>
+      </div>
+      
+      {/* Filters */}
+      <div className="bg-white rounded-lg shadow p-4 mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div>
+            <Input 
+              placeholder="Search by ID, school, or equipment" 
+              prefix={<SearchOutlined />} 
+              value={filters.searchTerm}
+              onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
+              allowClear
+            />
+          </div>
+          <div>
+            <Select
+              placeholder="Filter by status"
+              style={{ width: '100%' }}
+              value={filters.status}
+              onChange={(value) => handleFilterChange('status', value)}
+              allowClear
+            >
+              <Option value="approved">Approved</Option>
+              <Option value="pending">Pending</Option>
+              <Option value="completed">Completed</Option>
+              <Option value="cancelled">Cancelled</Option>
+              <Option value="returned">Returned</Option>
+            </Select>
+          </div>
+          <div>
+            <Select
+              placeholder="Filter by type"
+              style={{ width: '100%' }}
+              value={filters.transactionType}
+              onChange={(value) => handleFilterChange('transactionType', value)}
+              allowClear
+            >
+              <Option value="permanent">Permanent</Option>
+              <Option value="rental">Rental</Option>
+            </Select>
+          </div>
+          <div>
+            <RangePicker 
+              style={{ width: '100%' }} 
+              onChange={(dates) => handleFilterChange('dateRange', dates)}
+              placeholder={['Start date', 'End date']}
+            />
+          </div>
         </div>
       </div>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 mb-12">
-        {/* Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-medium text-gray-800">Total Transactions</h2>
-            <p className="text-3xl font-bold mt-2">{pagination.total}</p>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-medium text-gray-800">Total Equipment Items</h2>
-            <p className="text-3xl font-bold mt-2">{totalItems}</p>
-          </div>
-          
-          <div className="bg-white rounded-xl shadow-md p-6">
-            <h2 className="text-lg font-medium text-gray-800">Recipient Schools</h2>
-            <p className="text-3xl font-bold mt-2">
-              {new Set(transactions.map(t => t.recipient._id)).size}
-            </p>
-          </div>
-        </div>
-
-        {/* Transactions Table/List Card */}
-        <div className="bg-white rounded-xl shadow-md overflow-hidden">
-          <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              {selectedTransaction ? (
-                <>
-                  <button 
-                    onClick={() => setSelectedTransaction(null)}
-                    className="mr-2 p-1 rounded-full hover:bg-indigo-100"
-                  >
-                    <FiArrowLeft />
-                  </button>
-                  Transaction Details
-                </>
-              ) : (
-                <>
-                  <FiPackage className="mr-2 text-[#1e0fbf]" /> Equipment Transactions
-                </>
+      
+      {/* Transactions Table */}
+      <div className="bg-white rounded-lg shadow overflow-hidden">
+        <Table 
+          dataSource={filteredTransactions} 
+          columns={columns} 
+          rowKey="_id" 
+          pagination={{
+            current: pagination.page,
+            pageSize: pagination.limit,
+            total: pagination.total,
+            onChange: handlePageChange
+          }}
+          locale={{
+            emptyText: 'No transactions found'
+          }}
+          loading={loading}
+        />
+      </div>
+      
+      {/* Transaction Detail Modal */}
+      <Modal
+        title={`Transaction: ${selectedTransaction?.transactionId}`}
+        open={detailModalVisible}
+        onCancel={() => setDetailModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setDetailModalVisible(false)}>
+            Close
+          </Button>
+        ]}
+        width={800}
+      >
+        {selectedTransaction && (
+          <div className="space-y-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <h3 className="font-medium text-gray-500">School</h3>
+                <p>{selectedTransaction.school.name}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-500">Transaction Type</h3>
+                <p>
+                  <Tag color={selectedTransaction.transactionType === 'rental' ? 'blue' : 'green'}>
+                    {selectedTransaction.transactionType.toUpperCase()}
+                  </Tag>
+                </p>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-500">Status</h3>
+                <p>{getStatusTag(selectedTransaction.status)}</p>
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-500">Created Date</h3>
+                <p>{formatDate(selectedTransaction.createdAt)}</p>
+              </div>
+              
+              {selectedTransaction.approvedAt && (
+                <div>
+                  <h3 className="font-medium text-gray-500">Approved Date</h3>
+                  <p>{formatDate(selectedTransaction.approvedAt)}</p>
+                </div>
               )}
-            </h2>
+              
+              {selectedTransaction.approvedBy && (
+                <div>
+                  <h3 className="font-medium text-gray-500">Approved By</h3>
+                  <p>{selectedTransaction.approvedBy.fullName || selectedTransaction.approvedBy}</p>
+                </div>
+              )}
+              
+              {selectedTransaction.requestReference && (
+                <div>
+                  <h3 className="font-medium text-gray-500">Related Request</h3>
+                  <p>{selectedTransaction.requestReference}</p>
+                </div>
+              )}
+            </div>
             
-            {!selectedTransaction && (
-              <div className="flex flex-wrap gap-3">
-                <div className="flex items-center">
-                  <FiFilter className="text-gray-500 mr-2" />
-                  <select
-                    name="status"
-                    value={filters.status}
-                    onChange={handleFilterChange}
-                    className="border border-gray-300 rounded-md py-1 pl-2 pr-8 text-sm"
-                  >
-                    <option value="">All Statuses</option>
-                    <option value="pending">Pending</option>
-                    <option value="approved">Approved</option>
-                    <option value="completed">Completed</option>
-                    <option value="returned">Returned</option>
-                    <option value="rejected">Rejected</option>
-                    <option value="cancelled">Cancelled</option>
-                  </select>
+            {/* Rental details if applicable */}
+            {selectedTransaction.transactionType === 'rental' && selectedTransaction.rentalDetails && (
+              <>
+                <Divider />
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div>
+                    <h3 className="font-medium text-gray-500">Rental Start</h3>
+                    <p>{formatDate(selectedTransaction.rentalDetails.startDate)}</p>
+                  </div>
+                  <div>
+                    <h3 className="font-medium text-gray-500">Return Due</h3>
+                    <p>{formatDate(selectedTransaction.rentalDetails.returnDueDate)}</p>
+                  </div>
+                  {selectedTransaction.rentalDetails.returnedDate && (
+                    <div>
+                      <h3 className="font-medium text-gray-500">Returned Date</h3>
+                      <p>{formatDate(selectedTransaction.rentalDetails.returnedDate)}</p>
+                    </div>
+                  )}
+                  {selectedTransaction.rentalDetails.rentalFee !== undefined && (
+                    <div>
+                      <h3 className="font-medium text-gray-500">Rental Fee</h3>
+                      <p>LKR {selectedTransaction.rentalDetails.rentalFee.toFixed(2)}</p>
+                    </div>
+                  )}
                 </div>
-                
-                <div className="flex items-center">
-                  <select
-                    name="transactionType"
-                    value={filters.transactionType}
-                    onChange={handleFilterChange}
-                    className="border border-gray-300 rounded-md py-1 pl-2 pr-8 text-sm"
-                  >
-                    <option value="">All Types</option>
-                    <option value="rental">Rental</option>
-                    <option value="permanent">Permanent</option>
-                  </select>
-                </div>
+              </>
+            )}
+            
+            <Divider />
+            
+            <div>
+              <h3 className="font-medium text-gray-500 mb-2">Equipment Items</h3>
+              <Table 
+                dataSource={selectedTransaction.items} 
+                rowKey={(record, index) => `${record.equipment._id}-${index}`}
+                pagination={false}
+                size="small"
+                columns={[
+                  {
+                    title: 'Equipment',
+                    dataIndex: ['equipment', 'name'],
+                    key: 'equipment',
+                  },
+                  {
+                    title: 'Equipment ID',
+                    dataIndex: ['equipment', 'equipmentId'],
+                    key: 'equipmentId',
+                  },
+                  {
+                    title: 'Quantity',
+                    dataIndex: 'quantity',
+                    key: 'quantity',
+                  },
+                  {
+                    title: 'Condition',
+                    dataIndex: 'condition',
+                    key: 'condition',
+                    render: (condition: string) => (
+                      <Tag color={
+                        condition === 'new' ? 'green' :
+                        condition === 'excellent' ? 'cyan' :
+                        condition === 'good' ? 'blue' :
+                        condition === 'fair' ? 'orange' :
+                        'red'
+                      }>
+                        {condition.toUpperCase()}
+                      </Tag>
+                    )
+                  },
+                  {
+                    title: 'Notes',
+                    dataIndex: 'notes',
+                    key: 'notes',
+                    render: (notes: string) => notes || '-'
+                  }
+                ]}
+              />
+            </div>
+            
+            {selectedTransaction.additionalNotes && (
+              <div>
+                <Divider />
+                <h3 className="font-medium text-gray-500">Additional Notes</h3>
+                <p className="whitespace-pre-line">{selectedTransaction.additionalNotes}</p>
               </div>
             )}
           </div>
-
-          {/* Content based on state */}
-          {loading ? (
-            <div className="flex justify-center items-center py-20">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-[#1e0fbf]"></div>
-            </div>
-          ) : selectedTransaction ? (
-            // Transaction detail view
-            <div className="p-5">
-              <div className="mb-5 pb-5 border-b">
-                <h3 className="text-xl font-medium text-gray-900">{selectedTransaction.transactionId}</h3>
-                <p className="text-gray-500">Recipient: {selectedTransaction.recipient.name}</p>
-                <div className="mt-3 flex flex-wrap gap-3">
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${getStatusClass(selectedTransaction.status, selectedTransaction.rentalDetails?.returnDueDate)}`}>
-                    {getStatusText(selectedTransaction.status, selectedTransaction.rentalDetails?.returnDueDate)}
-                  </span>
-                  
-                  <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                    {selectedTransaction.transactionType === 'rental' ? 'Rental' : 'Permanent Transfer'}
-                  </span>
-                  
-                  {selectedTransaction.rentalDetails && (
-                    <>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                        Start: {formatDate(selectedTransaction.rentalDetails.startDate)}
-                      </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                        Due: {formatDate(selectedTransaction.rentalDetails.returnDueDate)}
-                      </span>
-                      {selectedTransaction.rentalDetails.returnedDate && (
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-green-100 text-green-800">
-                          Returned: {formatDate(selectedTransaction.rentalDetails.returnedDate)}
-                        </span>
-                      )}
-                    </>
-                  )}
-                </div>
-              </div>
-
-              <h4 className="font-medium text-gray-900 mb-3">Equipment Items</h4>
-              <div className="space-y-3 mb-6">
-                {selectedTransaction.items.map((item, idx) => (
-                  <div key={idx} className="bg-gray-50 p-4 rounded-md">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{item.equipment.name}</span>
-                      <span className="text-gray-600">Quantity: {item.quantity}</span>
-                    </div>
-                    <div className="mt-2 flex justify-between text-sm">
-                      <span className="text-gray-500">Condition: {item.condition}</span>
-                      <span className="text-gray-500">ID: {item.equipment.equipmentId}</span>
-                    </div>
-                    {item.notes && (
-                      <p className="mt-2 text-sm text-gray-500">Notes: {item.notes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              <div className="flex justify-between items-center pt-4 border-t">
-                <span className="text-sm text-gray-500">
-                  Created: {formatDate(selectedTransaction.createdAt)}
-                </span>
-                <button
-                  onClick={() => setSelectedTransaction(null)}
-                  className="px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md"
-                >
-                  Back to List
-                </button>
-              </div>
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-gray-500">No equipment transactions found.</p>
-              <p className="text-gray-500 mt-2">
-                When you provide equipment to schools, your transactions will appear here.
-              </p>
-            </div>
-          ) : (
-            // List view
-            <div className="p-5">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        ID
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Recipient
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Items
-                      </th>
-                      <th scope="col" className="relative px-6 py-3">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {transactions.map(transaction => (
-                      <tr key={transaction._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {transaction.transactionId}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.recipient.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.transactionType === 'rental' ? 'Rental' : 'Permanent'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                            getStatusClass(transaction.status, transaction.rentalDetails?.returnDueDate)
-                          }`}>
-                            {getStatusText(transaction.status, transaction.rentalDetails?.returnDueDate)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.transactionType === 'rental' && transaction.rentalDetails ? (
-                            <>
-                              {formatDate(transaction.rentalDetails.returnDueDate)}
-                              <br/>
-                              <span className={
-                                transaction.status === 'approved' && 
-                                transaction.rentalDetails.returnDueDate && 
-                                isAfter(new Date(), new Date(transaction.rentalDetails.returnDueDate)) ? 
-                                "text-red-600" : "text-gray-400"
-                              }>
-                                {transaction.status === 'approved' ? 'Due Date' : ''}
-                              </span>
-                            </>
-                          ) : (
-                            formatDate(transaction.createdAt)
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.items.length} {transaction.items.length === 1 ? 'item' : 'items'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => setSelectedTransaction(transaction)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            View
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              
-              {/* Pagination */}
-              {pagination.pages > 1 && (
-                <div className="flex justify-center pt-5">
-                  <Pagination 
-                    count={pagination.pages}
-                    page={pagination.page}
-                    onChange={handlePageChange}
-                    color="primary"
-                    shape="rounded"
-                  />
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
+        )}
+      </Modal>
     </div>
   );
 };
