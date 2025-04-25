@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from "react";
-import { FiMapPin, FiMail, FiPhone, FiUser, FiHash, FiCompass, FiLoader, FiFileText, FiImage, FiUploadCloud } from "react-icons/fi";
+import { FiMapPin, FiMail, FiPhone, FiUser, FiHash, FiCompass, FiLoader, FiFileText } from "react-icons/fi";
 import { toast } from "react-hot-toast";
 import Image from "next/image";
 
@@ -24,7 +24,6 @@ interface School {
     schoolId: string;
     sid?: number;
     name: string;
-    profilePicUrl?: string;
     location: SchoolLocation;
     contact: SchoolContact;
     principalName?: string;
@@ -37,28 +36,7 @@ const Profile = () => {
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [isSaving, setIsSaving] = useState(false);
-    const [profilePicFile, setProfilePicFile] = useState<File | null>(null);
-    const [profilePicPreview, setProfilePicPreview] = useState<string | null>(null);
 
-    // Function to generate correct download URL for profile pictures
-    const getProfileImageUrl = (imageUrl: string | null) => {
-        if (!imageUrl) return null;
-        
-        // Avoid processing URLs that are already pointing to our API
-        if (imageUrl.startsWith('/api/file/download')) {
-            return imageUrl;
-        }
-
-        // Check if it's a full URL 
-        if (imageUrl.startsWith('http')) {
-            return `/api/file/download?fileUrl=${encodeURIComponent(imageUrl)}`;
-        }
-        
-        // Handle just the filename case
-        return `/api/file/download?file=${encodeURIComponent(imageUrl)}`;
-    };
-
-    // Fetch school data on component mount
     useEffect(() => {
         const fetchSchoolData = async () => {
             try {
@@ -105,7 +83,6 @@ const Profile = () => {
                     schoolId: completeSchoolInfo.schoolId || '',
                     sid: completeSchoolInfo.sid,
                     name: completeSchoolInfo.name || '',
-                    profilePicUrl: completeSchoolInfo.profilePicUrl || completeSchoolInfo.profilePicture,
                     location: {
                         district: completeSchoolInfo.location?.district || '',
                         zonal: completeSchoolInfo.location?.zonal || '',
@@ -123,13 +100,6 @@ const Profile = () => {
                     verified: completeSchoolInfo.verified || false
                 });
                 
-                // Set profile pic preview if available
-                const profilePicUrl = completeSchoolInfo.profilePicUrl || completeSchoolInfo.profilePicture;
-                if (profilePicUrl) {
-                    console.log("Setting profile pic preview:", profilePicUrl);
-                    setProfilePicPreview(getProfileImageUrl(profilePicUrl));
-                }
-                
                 setError(null);
             } catch (err) {
                 console.error('Error fetching school data:', err);
@@ -142,30 +112,6 @@ const Profile = () => {
 
         fetchSchoolData();
     }, []);
-
-    // Effect to create/revoke object URL for preview
-    useEffect(() => {
-        let objectUrl: string | null = null;
-        if (profilePicFile) {
-            objectUrl = URL.createObjectURL(profilePicFile);
-            setProfilePicPreview(objectUrl);
-            setIsDirty(true);
-        } else {
-            // Use the download API for stored profile pictures
-            const picUrl = schoolData?.profilePicUrl;
-            if (picUrl) {
-                setProfilePicPreview(getProfileImageUrl(picUrl));
-            } else {
-                setProfilePicPreview(null);
-            }
-        }
-
-        return () => {
-            if (objectUrl) {
-                URL.revokeObjectURL(objectUrl);
-            }
-        };
-    }, [profilePicFile, schoolData?.profilePicUrl]);
 
     // Function to handle input changes and update nested state
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -202,81 +148,14 @@ const Profile = () => {
         setIsDirty(true); // Mark as dirty whenever a change occurs
     };
 
-    // Handler for file selection
-    const handleFileChange = (file: File | null) => {
-        if (file && file.type.startsWith('image/')) {
-            setProfilePicFile(file);
-            console.log("Profile pic file set:", file.name);
-        } else {
-            setProfilePicFile(null);
-            if (file) toast.error("Please select a valid image file.");
-        }
-    };
-
-    // Drag and drop handlers
-    const handleDragOver = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-    }, []);
-
-    const handleDrop = useCallback((e: React.DragEvent<HTMLDivElement>) => {
-        e.preventDefault();
-        e.stopPropagation();
-        if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-            handleFileChange(e.dataTransfer.files[0]);
-        }
-    }, []);
-
-    // Click handler for the drop zone
-    const handleDropZoneClick = () => {
-        document.getElementById('profilePicInput')?.click();
-    };
-
-    // Function to handle the update action
+    // Simplified update handler without profile pic upload
     const handleUpdate = async () => {
         if (!schoolData) return;
         
         try {
             setIsSaving(true);
             
-            // First handle profile picture upload if there's a new file
-            let profilePicUrl = schoolData.profilePicUrl;
-            
-            if (profilePicFile) {
-                console.log("Uploading profile picture...");
-                const formData = new FormData();
-                formData.append('file', profilePicFile);
-
-                // Upload the profile picture
-                const uploadResponse = await fetch('/api/file/upload', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                if (!uploadResponse.ok) {
-                    throw new Error(`Error uploading profile picture: ${uploadResponse.statusText}`);
-                }
-
-                const uploadResult = await uploadResponse.json();
-                console.log("Upload result:", uploadResult);
-
-                if (!uploadResult.url) {
-                    throw new Error("Failed to get upload URL from server response");
-                }
-
-                // Update the URL for our API call
-                profilePicUrl = uploadResult.url;
-            }
-            
-            console.log("Updating school profile with:", {
-                name: schoolData.name,
-                profilePicUrl: profilePicUrl,
-                contact: schoolData.contact,
-                location: schoolData.location,
-                principalName: schoolData.principalName
-            });
-            
-            // Now update the school profile
+            // Update the school profile
             const response = await fetch(`/api/school?id=${schoolData.id || schoolData.schoolId}`, {
                 method: 'PATCH',
                 headers: {
@@ -284,7 +163,6 @@ const Profile = () => {
                 },
                 body: JSON.stringify({
                     name: schoolData.name,
-                    profilePicUrl: profilePicUrl,
                     contact: schoolData.contact,
                     location: schoolData.location,
                     principalName: schoolData.principalName
@@ -292,24 +170,17 @@ const Profile = () => {
             });
             
             if (!response.ok) {
-                throw new Error(`Error updating profile: ${response.statusText}`);
+                const errorData = await response.json().catch(() => null);
+                throw new Error(
+                    errorData?.error || 
+                    `Error updating profile (${response.status}): ${response.statusText}`
+                );
             }
             
             const result = await response.json();
-            console.log("Update result:", result);
-            
-            // Update the school data with the returned data
-            setSchoolData(prev => {
-                if (!prev) return null;
-                return {
-                    ...prev,
-                    profilePicUrl: profilePicUrl
-                };
-            });
             
             toast.success('Profile updated successfully');
             setIsDirty(false);
-            setProfilePicFile(null);
         } catch (err) {
             console.error('Error updating school profile:', err);
             toast.error(err instanceof Error ? err.message : 'Failed to update profile');
@@ -321,7 +192,6 @@ const Profile = () => {
     // Basic input styling
     const inputStyle = "mt-1 block w-full px-3 py-2 bg-white border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-gray-700";
     const textareaStyle = inputStyle + " min-h-[80px]";
-    const dropZoneStyle = "mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md cursor-pointer hover:border-indigo-500";
 
     // Show loading state
     if (isLoading) {
@@ -423,61 +293,6 @@ const Profile = () => {
                                 className={inputStyle}
                                 placeholder="School Name"
                             />
-                        </div>
-
-                        {/* Profile Picture Upload */}
-                        <div className="flex items-start">
-                            <FiImage className="mr-3 mt-2.5 flex-shrink-0 text-[#6e11b0]" size={18} />
-                            <label className="w-32 mt-2 text-sm font-medium text-gray-700">School Logo:</label>
-                            <div className="w-full">
-                                {/* Drop Zone */}
-                                <div
-                                    className={dropZoneStyle}
-                                    onClick={handleDropZoneClick}
-                                    onDragOver={handleDragOver}
-                                    onDrop={handleDrop}
-                                >
-                                    <div className="space-y-1 text-center">
-                                        {profilePicPreview ? (
-                                            <img 
-                                                src={profilePicPreview} 
-                                                alt="Profile Preview" 
-                                                className="mx-auto h-24 w-24 object-cover rounded-md mb-2" 
-                                                onError={(e) => {
-                                                    console.error("Failed to load image:", profilePicPreview);
-                                                    e.currentTarget.src = '/school-placeholder.png';
-                                                }}
-                                            />
-                                        ) : (
-                                            <FiUploadCloud className="mx-auto h-12 w-12 text-gray-400" />
-                                        )}
-                                        <div className="flex text-sm text-gray-600 justify-center">
-                                            <span className="relative font-medium text-indigo-600 hover:text-indigo-500">
-                                                Upload a file
-                                            </span>
-                                            <input
-                                                id="profilePicInput"
-                                                name="profilePicFile"
-                                                type="file"
-                                                accept="image/*"
-                                                className="sr-only"
-                                                onChange={(e) => handleFileChange(e.target.files ? e.target.files[0] : null)}
-                                            />
-                                            <p className="pl-1">or drag and drop</p>
-                                        </div>
-                                        <p className="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                                    </div>
-                                </div>
-                                {/* Button to remove selected file */}
-                                {profilePicFile && (
-                                    <button
-                                        onClick={() => handleFileChange(null)}
-                                        className="mt-2 text-sm text-red-600 hover:text-red-800"
-                                    >
-                                        Remove selected image
-                                    </button>
-                                )}
-                            </div>
                         </div>
 
                         {/* Location Fields */}

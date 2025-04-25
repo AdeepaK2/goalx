@@ -31,10 +31,12 @@ export async function GET(request: NextRequest) {
       const transaction = await EquipmentTransaction.findOne({ 
         $or: [{ _id: id }, { transactionId: id }] 
       })
-      .populate('provider')
+      .populate({
+        path: 'provider',
+        model: providerType === 'school' ? 'School' : 'GovernBody' 
+      })
       .populate('recipient', 'name schoolId')
-      .populate('items.equipment', 'name equipmentId')
-      .populate('approvedBy', 'fullName email');
+      .populate('items.equipment', 'name equipmentId');
       
       if (!transaction) {
         return new NextResponse(JSON.stringify({ error: 'Equipment transaction not found' }), {
@@ -87,10 +89,12 @@ export async function GET(request: NextRequest) {
     const skip = (page - 1) * limit;
 
     const transactions = await EquipmentTransaction.find(query)
-      .populate('provider')
+      .populate({
+        path: 'provider',
+        model: providerType === 'school' ? 'School' : 'GovernBody'
+      })
       .populate('recipient', 'name schoolId')
       .populate('items.equipment', 'name equipmentId')
-      .populate('approvedBy', 'fullName email')
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
@@ -245,7 +249,10 @@ export async function POST(request: NextRequest) {
     await transaction.save();
     
     // Populate references for response
-    await transaction.populate('provider');
+    await transaction.populate({
+      path: 'provider',
+      model: body.providerType === 'school' ? 'School' : 'GovernBody'
+    });
     await transaction.populate('recipient', 'name schoolId');
     await transaction.populate('items.equipment', 'name equipmentId');
     
@@ -381,10 +388,12 @@ export async function PATCH(request: NextRequest) {
       { $set: body },
       { new: true, runValidators: true }
     )
-    .populate('provider')
+    .populate({
+      path: 'provider',
+      model: existingTransaction.providerType === 'school' ? 'School' : 'GovernBody'
+    })
     .populate('recipient', 'name schoolId')
-    .populate('items.equipment', 'name equipmentId')
-    .populate('approvedBy', 'fullName email');
+    .populate('items.equipment', 'name equipmentId');
     
     return new NextResponse(JSON.stringify(updatedTransaction), {
       status: 200,

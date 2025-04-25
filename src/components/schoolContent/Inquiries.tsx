@@ -1,14 +1,12 @@
 "use client";
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import axios from "axios";
-import Link from "next/link";
 import { FiX, FiCheck, FiAlertCircle, FiCalendar, FiMapPin, FiPackage, FiSend } from "react-icons/fi";
 
 interface Equipment {
   _id: string;
   equipmentId: string;
   name: string;
-  quantity?: number;
 }
 
 interface School {
@@ -59,8 +57,7 @@ const Inquiries: React.FC = () => {
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [currentSchool, setCurrentSchool] = useState<School | null>(null);
-  const [availableEquipment, setAvailableEquipment] = useState<Equipment[]>([]);
-  
+
   // Filter states
   const [districtFilter, setDistrictFilter] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -83,53 +80,58 @@ const Inquiries: React.FC = () => {
   // Function to fetch school information
   const fetchSchoolInfo = async () => {
     try {
-      const response = await axios.get("/api/school/current");
-      const schoolData = response.data.school;
-      setCurrentSchool(schoolData);
-      return schoolData;
+      // First get basic school info from auth endpoint
+      const response = await axios.get("/api/auth/school/me");
+      const basicSchoolData = response.data.school;
+
+      // Ensure we have the basic school data with id
+      if (!basicSchoolData || !basicSchoolData.id) {
+        throw new Error("Incomplete school data received");
+      }
+      
+      console.log("Basic school data:", basicSchoolData);
+      
+      // Make second request to get full school details including location
+      const fullSchoolResponse = await axios.get(`/api/school?id=${basicSchoolData.id}`);
+      
+      if (!fullSchoolResponse.data) {
+        throw new Error("Failed to retrieve complete school data");
+      }
+      
+      // The school endpoint returns the school object directly
+      const fullSchoolData = fullSchoolResponse.data;
+      console.log("Full school data:", fullSchoolData);
+      
+      // Create properly formatted school object
+      const formattedSchool: School = {
+        _id: fullSchoolData._id,
+        schoolId: fullSchoolData.schoolId || "",
+        name: fullSchoolData.name || "Unknown School",
+        location: {
+          district: fullSchoolData.location?.district || "",
+          province: fullSchoolData.location?.province || "",
+          coordinates: fullSchoolData.location?.coordinates || undefined
+        }
+      };
+      
+      console.log("Formatted school object:", formattedSchool);
+      setCurrentSchool(formattedSchool);
+      return formattedSchool;
     } catch (err: any) {
       console.error("Failed to fetch school info:", err);
-      setError(`Failed to load school information: ${err.message || 'Unknown error'}`);
+      setError(`Failed to load school information: ${err.message || "Unknown error"}`);
       return null;
     }
   };
 
-  // Fetch available equipment for the current school
-  const fetchAvailableEquipment = async () => {
-    try {
-      const response = await axios.get("/api/equipment/inventory/school");
-      setAvailableEquipment(response.data.equipment || []);
-    } catch (err: any) {
-      console.error("Failed to fetch available equipment:", err);
-    }
-  };
-
-  // Calculate distance between two coordinates (using Haversine formula)
-  const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-    const R = 6371; // Radius of the earth in km
-    const dLat = deg2rad(lat2 - lat1);
-    const dLon = deg2rad(lon2 - lon1);
-    const a = 
-      Math.sin(dLat/2) * Math.sin(dLat/2) +
-      Math.cos(deg2rad(lat1)) * Math.cos(deg2rad(lat2)) * 
-      Math.sin(dLon/2) * Math.sin(dLon/2); 
-    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)); 
-    const distance = R * c; // Distance in km
-    return distance;
-  };
-  
-  const deg2rad = (deg: number) => {
-    return deg * (Math.PI/180);
-  };
-
   // Fetch equipment requests from all schools
   const fetchRequests = async (school: School) => {
-    if (!school) {
-      setError("School information is missing");
+    if (!school || !school._id) {
+      setError("School information is missing or incomplete");
       setLoading(false);
       return;
     }
-    
+
     try {
       // Fetch all pending equipment requests
       const response = await axios.get("/api/equipment/request", {
@@ -138,75 +140,29 @@ const Inquiries: React.FC = () => {
           limit: 100
         }
       });
-      
+
       if (response.data && Array.isArray(response.data.equipmentRequests)) {
         // Filter out requests from the current school and already completed transactions
         let allRequests = response.data.equipmentRequests.filter(
           (req: EquipmentRequest) => {
-            return req.school._id !== school._id && !completedTransactions.has(req._id);
+            // Make sure both the request school and the school._id exist
+            return req.school &&
+                   req.school._id &&
+                   req.school._id !== school._id &&
+                   !completedTransactions.has(req._id);
           }
         );
-        
-        // Sort by proximity if coordinates are available
-        if (school.location?.coordinates) {
-            allRequests = allRequests.map((req: EquipmentRequest): EquipmentRequest => {
-            const reqCoords = req.school.location.coordinates;
-            let distance: number = Infinity;
-            
-            if (reqCoords && school.location.coordinates) {
-              distance = calculateDistance(
-              school.location.coordinates.latitude,
-              school.location.coordinates.longitude,
-              reqCoords.latitude,
-              reqCoords.longitude
-              );
-            } else if (req.school.location.district === school.location.district) {
-              // If coordinates aren't available, prioritize same district
-              distance = 1; // Arbitrary close distance
-            } else if (req.school.location.province === school.location.province) {
-              // Then same province
-              distance = 50; // Arbitrary medium distance
-            } else {
-              distance = 1000; // Arbitrary far distance
-            }
-            
-            return { ...req, distance };
-            });
-          
-          // Sort by distance
-          allRequests.sort((a: EquipmentRequest, b: EquipmentRequest) => (a.distance || Infinity) - (b.distance || Infinity));
-        } else {
-          // Without coordinates, prioritize same district, then province
-          allRequests.sort((a: EquipmentRequest, b: EquipmentRequest) => {
-            if (a.school.location.district === school.location.district && 
-                b.school.location.district !== school.location.district) {
-              return -1;
-            }
-            if (a.school.location.district !== school.location.district && 
-                b.school.location.district === school.location.district) {
-              return 1;
-            }
-            if (a.school.location.province === school.location.province && 
-                b.school.location.province !== school.location.province) {
-              return -1;
-            }
-            if (a.school.location.province !== school.location.province && 
-                b.school.location.province === school.location.province) {
-              return 1;
-            }
-            return 0;
-          });
-        }
-        
+
+        // No sorting by coordinates - keep the order as is
         setRequests(allRequests);
         setFilteredRequests(allRequests);
       } else {
-        console.error('Invalid equipment requests response format:', response.data);
+        console.error("Invalid equipment requests response format:", response.data);
         setError("Invalid response format from server");
       }
     } catch (err: any) {
       console.error("Failed to fetch equipment requests:", err);
-      setError(`Failed to load equipment requests: ${err.message || 'Unknown error'}`);
+      setError(`Failed to load equipment requests: ${err.message || "Unknown error"}`);
     } finally {
       setLoading(false);
     }
@@ -215,53 +171,45 @@ const Inquiries: React.FC = () => {
   // Apply filters to requests
   useEffect(() => {
     let filtered = [...requests];
-    
-    // Apply district filter
-    if (districtFilter !== "all") {
-      filtered = filtered.filter(req => 
-        req.school.location.district === districtFilter
-      );
-    }
-    
-    // Apply search filter
+
+    // Apply search filter only
     if (searchTerm) {
       const term = searchTerm.toLowerCase();
-      filtered = filtered.filter(req => 
+      filtered = filtered.filter(req =>
         req.eventName.toLowerCase().includes(term) ||
         req.school.name.toLowerCase().includes(term) ||
-        req.eventDescription.toLowerCase().includes(term) ||
+        req.eventDescription?.toLowerCase().includes(term) ||
         req.items.some(item => item.equipment.name.toLowerCase().includes(term))
       );
     }
-    
+
     setFilteredRequests(filtered);
-  }, [districtFilter, searchTerm, requests]);
+  }, [searchTerm, requests]);
 
   // Handle opening the transaction modal
   const openTransactionModal = (request: EquipmentRequest) => {
     setSelectedRequest(request);
-    
+
     // Initialize transaction items based on request
     const initialItems = request.items.map(item => ({
       equipment: item.equipment._id,
-      quantity: Math.min(item.quantityRequested, 
-        availableEquipment.find(e => e._id === item.equipment._id)?.quantity || 0),
+      quantity: 0, // Start with 0 quantity, school will enter how much they can provide
       condition: "good",
       notes: ""
     }));
-    
+
     setTransactionItems(initialItems);
-    
+
     // Set default rental dates
     const today = new Date();
     const oneWeekLater = new Date();
     oneWeekLater.setDate(today.getDate() + 7);
-    
+
     setRentalDates({
-      startDate: today.toISOString().split('T')[0],
-      returnDueDate: oneWeekLater.toISOString().split('T')[0]
+      startDate: today.toISOString().split("T")[0],
+      returnDueDate: oneWeekLater.toISOString().split("T")[0]
     });
-    
+
     setTransactionModalOpen(true);
     setTransactionError(null);
     setTransactionSuccess(false);
@@ -270,20 +218,19 @@ const Inquiries: React.FC = () => {
   // Handle transaction item quantity change
   const handleQuantityChange = (index: number, value: number) => {
     const newItems = [...transactionItems];
-    
-    // Ensure quantity is within valid range
-    const requestedItem = selectedRequest?.items[index];
-    const availableItem = availableEquipment.find(
-      e => e._id === requestedItem?.equipment._id
-    );
-    
-    const maxQuantity = Math.min(
-      requestedItem?.quantityRequested || 0,
-      availableItem?.quantity || 0
-    );
-    
-    value = Math.max(0, Math.min(value, maxQuantity));
-    
+
+    // Ensure quantity is not negative
+    value = Math.max(0, value);
+
+    // Get requested quantity as maximum
+    if (selectedRequest) {
+      const requestedItem = selectedRequest.items[index];
+      if (requestedItem) {
+        // Don't exceed requested amount (optional - can be removed if needed)
+        value = Math.min(value, requestedItem.quantityRequested);
+      }
+    }
+
     newItems[index].quantity = value;
     setTransactionItems(newItems);
   };
@@ -305,55 +252,70 @@ const Inquiries: React.FC = () => {
   // Submit transaction
   const handleSubmitTransaction = async () => {
     if (!selectedRequest || !currentSchool) return;
-    
+
     // Validate transaction items
     const validItems = transactionItems.filter(item => item.quantity > 0);
     if (validItems.length === 0) {
       setTransactionError("Please provide at least one equipment item");
       return;
     }
-    
+
     // Validate rental dates if this is a rental
     if (transactionType === "rental") {
       if (!rentalDates.startDate || !rentalDates.returnDueDate) {
         setTransactionError("Please provide rental start and return dates");
         return;
       }
-      
+
       const startDate = new Date(rentalDates.startDate);
       const returnDueDate = new Date(rentalDates.returnDueDate);
-      
+
       if (returnDueDate <= startDate) {
         setTransactionError("Return due date must be after start date");
         return;
       }
     }
-    
+
     setTransactionLoading(true);
     setTransactionError(null);
-    
+
     try {
-      // Create transaction payload
+      // Create transaction payload matching exactly what the API expects
+      // Important: Setting status to "approved" directly instead of the two-step process
       const payload = {
         providerType: "school",
         provider: currentSchool._id,
         recipient: selectedRequest.school._id,
         transactionType: transactionType,
-        items: validItems,
-        status: "approved", // Auto-approve since the school is directly providing
-        additionalNotes: transactionNotes,
-        rentalDetails: transactionType === "rental" ? {
-          startDate: rentalDates.startDate,
-          returnDueDate: rentalDates.returnDueDate
-        } : undefined
+        items: validItems.map(item => ({
+          equipment: item.equipment,
+          quantity: item.quantity,
+          condition: item.condition,
+          notes: item.notes || undefined
+        })),
+        // Set to approved directly - this avoids the PATCH request that's failing
+        status: "approved",
+        // No approvedBy field needed here - backend will handle it
+        additionalNotes: transactionNotes || undefined,
+        ...(transactionType === "rental" ? {
+          rentalDetails: {
+            startDate: rentalDates.startDate,
+            returnDueDate: rentalDates.returnDueDate
+          }
+        } : {}),
+        // Set approvedAt to now
+        approvedAt: new Date()
       };
+
+      console.log("Sending transaction payload:", payload);
       
-      // Submit the transaction
+      // Submit the transaction with approved status directly
       const response = await axios.post("/api/equipment/transaction", payload);
-      
+      console.log("Transaction response:", response.data);
+
       if (response.data) {
         setTransactionSuccess(true);
-        
+
         // Update request status on the server
         await axios.patch(`/api/equipment/request?id=${selectedRequest._id}`, {
           status: "approved",
@@ -362,15 +324,15 @@ const Inquiries: React.FC = () => {
             entityType: "School"
           }
         });
-        
+
         // Add to completed transactions so it doesn't show up in the list
         setCompletedTransactions(prev => new Set([...prev, selectedRequest._id]));
-        
+
         // Update the filtered list
-        setFilteredRequests(prev => 
+        setFilteredRequests(prev =>
           prev.filter(req => req._id !== selectedRequest._id)
         );
-        
+
         // Close modal after 2 seconds
         setTimeout(() => {
           setTransactionModalOpen(false);
@@ -379,7 +341,12 @@ const Inquiries: React.FC = () => {
       }
     } catch (err: any) {
       console.error("Failed to create transaction:", err);
-      setTransactionError(err.response?.data?.error || err.message || "Failed to create transaction");
+      // Provide detailed error information from the API response
+      const errorMsg = err.response?.data?.error || 
+                      err.response?.data?.details || 
+                      err.message || 
+                      "Failed to create transaction";
+      setTransactionError(typeof errorMsg === 'object' ? JSON.stringify(errorMsg) : errorMsg);
     } finally {
       setTransactionLoading(false);
     }
@@ -401,10 +368,7 @@ const Inquiries: React.FC = () => {
     const loadData = async () => {
       const schoolData = await fetchSchoolInfo();
       if (schoolData) {
-        await Promise.all([
-          fetchRequests(schoolData),
-          fetchAvailableEquipment()
-        ]);
+        await fetchRequests(schoolData);
       }
     };
 
@@ -423,12 +387,6 @@ const Inquiries: React.FC = () => {
       console.error("Error formatting date:", dateString, e);
       return "Invalid Date";
     }
-  };
-
-  // Get equipment name from ID
-  const getEquipmentName = (id: string) => {
-    const equipment = availableEquipment.find(e => e._id === id);
-    return equipment?.name || "Unknown Equipment";
   };
 
   if (loading) {
@@ -452,41 +410,23 @@ const Inquiries: React.FC = () => {
       <h2 className="text-2xl font-semibold mb-6 text-gray-800">
         Equipment Requests from Other Schools
       </h2>
-      
+
       {/* Filters */}
       <div className="bg-white p-4 rounded-lg shadow-md mb-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="w-full md:w-1/2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              Search
-            </label>
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              placeholder="Search equipment, school name, event..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            />
-          </div>
-          
-          <div className="w-full md:w-1/2">
-            <label className="block text-sm font-medium text-gray-700 mb-1">
-              District
-            </label>
-            <select
-              value={districtFilter}
-              onChange={(e) => setDistrictFilter(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
-            >
-              <option value="all">All Districts</option>
-              {getUniqueDistricts().map(district => (
-                <option key={district} value={district}>{district}</option>
-              ))}
-            </select>
-          </div>
+        <div className="w-full">
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Search
+          </label>
+          <input
+            type="text"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            placeholder="Search equipment, school name, event..."
+            className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+          />
         </div>
       </div>
-      
+
       {/* Request card section */}
       {filteredRequests.length === 0 ? (
         <div className="bg-white p-6 rounded-lg shadow-md">
@@ -496,78 +436,33 @@ const Inquiries: React.FC = () => {
         </div>
       ) : (
         <div className="space-y-6">
-          {/* Nearby schools section */}
-          {currentSchool?.location?.district && (
-            <div className="mb-6">
-              <h3 className="text-xl font-medium text-gray-800 mb-4 flex items-center">
-                <FiMapPin className="mr-2 text-blue-600" /> 
-                Schools in {currentSchool.location.district} District
-              </h3>
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {filteredRequests
-                  .filter(req => req.school.location.district === currentSchool.location.district)
-                  .map((request) => (
-                    <RequestCard 
-                      key={request._id}
-                      request={request}
-                      formatDate={formatDate}
-                      onHelpClick={() => openTransactionModal(request)}
-                      isNearby={true}
-                    />
-                  ))}
-                  
-                {filteredRequests.filter(req => 
-                  req.school.location.district === currentSchool.location.district
-                ).length === 0 && (
-                  <div className="col-span-full bg-blue-50 p-4 rounded-md">
-                    <p className="text-blue-700 text-center">
-                      No requests from schools in your district currently.
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
-          
-          {/* Other schools section */}
           <div>
             <h3 className="text-xl font-medium text-gray-800 mb-4 flex items-center">
-              <FiMapPin className="mr-2 text-indigo-600" /> 
-              Other Schools
+              <FiMapPin className="mr-2 text-blue-600" /> 
+              Equipment Requests from Schools
             </h3>
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {filteredRequests
-                .filter(req => 
-                  !currentSchool?.location?.district || 
-                  req.school.location.district !== currentSchool.location.district
-                )
-                .map((request) => (
-                  <RequestCard 
-                    key={request._id}
-                    request={request}
-                    formatDate={formatDate}
-                    onHelpClick={() => openTransactionModal(request)}
-                    isNearby={false}
-                  />
-                ))}
-                
-              {filteredRequests.filter(req => 
-                !currentSchool?.location?.district || 
-                req.school.location.district !== currentSchool.location.district
-              ).length === 0 && (
-                <div className="col-span-full bg-gray-50 p-4 rounded-md">
-                  <p className="text-gray-700 text-center">
-                    No requests from other districts currently.
-                  </p>
-                </div>
-              )}
+              {filteredRequests.map((request) => (
+                <RequestCard 
+                  key={request._id}
+                  request={request}
+                  formatDate={formatDate}
+                  onHelpClick={() => openTransactionModal(request)}
+                  isNearby={
+                    Boolean(
+                      currentSchool?.location?.district && 
+                      request.school?.location?.district && 
+                      currentSchool.location.district === request.school.location.district
+                    )
+                  }
+                />
+              ))}
             </div>
           </div>
         </div>
       )}
-      
+
       {/* Transaction Modal */}
       {transactionModalOpen && selectedRequest && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
@@ -585,7 +480,7 @@ const Inquiries: React.FC = () => {
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6">
               {transactionSuccess ? (
                 <div className="text-center p-6">
@@ -610,13 +505,13 @@ const Inquiries: React.FC = () => {
                       </p>
                     </div>
                   </div>
-                  
+
                   {transactionError && (
                     <div className="mb-6 p-3 bg-red-50 border border-red-200 rounded-md text-red-700">
                       {transactionError}
                     </div>
                   )}
-                  
+
                   <div className="mb-6">
                     <h4 className="font-medium text-gray-900 mb-2">Transaction Type</h4>
                     <div className="flex gap-4">
@@ -640,7 +535,7 @@ const Inquiries: React.FC = () => {
                       </label>
                     </div>
                   </div>
-                  
+
                   {transactionType === "rental" && (
                     <div className="mb-6 grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
@@ -650,7 +545,7 @@ const Inquiries: React.FC = () => {
                         <input
                           type="date"
                           value={rentalDates.startDate}
-                          onChange={(e) => setRentalDates({...rentalDates, startDate: e.target.value})}
+                          onChange={(e) => setRentalDates({ ...rentalDates, startDate: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                         />
                       </div>
@@ -661,87 +556,78 @@ const Inquiries: React.FC = () => {
                         <input
                           type="date"
                           value={rentalDates.returnDueDate}
-                          onChange={(e) => setRentalDates({...rentalDates, returnDueDate: e.target.value})}
+                          onChange={(e) => setRentalDates({ ...rentalDates, returnDueDate: e.target.value })}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                         />
                       </div>
                     </div>
                   )}
-                  
+
                   <div className="mb-6">
                     <h4 className="font-medium text-gray-900 mb-2">Equipment Items</h4>
+                    <p className="text-sm text-gray-500 mb-4">Enter the quantity of each item you can provide</p>
                     <div className="space-y-4">
-                      {selectedRequest.items.map((item, index) => {
-                        const availableItem = availableEquipment.find(e => e._id === item.equipment._id);
-                        const maxQuantity = Math.min(
-                          item.quantityRequested, 
-                          availableItem?.quantity || 0
-                        );
-                        
-                        return (
-                          <div key={index} className="border border-gray-200 rounded-md p-4">
-                            <div className="flex justify-between mb-2">
-                              <span className="font-medium">{item.equipment.name}</span>
-                              <span className="text-sm text-gray-500">
-                                Available: {availableItem?.quantity || 0}, 
-                                Requested: {item.quantityRequested}
-                              </span>
+                      {selectedRequest.items.map((item, index) => (
+                        <div key={index} className="border border-gray-200 rounded-md p-4">
+                          <div className="flex justify-between mb-2">
+                            <span className="font-medium">{item.equipment.name}</span>
+                            <span className="text-sm text-gray-500">
+                              Requested: {item.quantityRequested}
+                            </span>
+                          </div>
+
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Quantity to Provide
+                              </label>
+                              <input
+                                type="number"
+                                min="0"
+                                max={item.quantityRequested}
+                                value={transactionItems[index]?.quantity || 0}
+                                onChange={(e) => handleQuantityChange(index, parseInt(e.target.value))}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
+                              />
                             </div>
-                            
-                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Quantity
-                                </label>
-                                <input
-                                  type="number"
-                                  min="0"
-                                  max={maxQuantity}
-                                  value={transactionItems[index]?.quantity || 0}
-                                  onChange={(e) => handleQuantityChange(index, parseInt(e.target.value))}
-                                  disabled={maxQuantity === 0}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                />
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Condition
-                                </label>
-                                <select
-                                  value={transactionItems[index]?.condition || "good"}
-                                  onChange={(e) => handleConditionChange(index, e.target.value)}
-                                  disabled={transactionItems[index]?.quantity === 0}
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                >
-                                  <option value="new">New</option>
-                                  <option value="excellent">Excellent</option>
-                                  <option value="good">Good</option>
-                                  <option value="fair">Fair</option>
-                                  <option value="poor">Poor</option>
-                                </select>
-                              </div>
-                              
-                              <div>
-                                <label className="block text-sm font-medium text-gray-700 mb-1">
-                                  Notes (Optional)
-                                </label>
-                                <input
-                                  type="text"
-                                  value={transactionItems[index]?.notes || ""}
-                                  onChange={(e) => handleItemNotesChange(index, e.target.value)}
-                                  disabled={transactionItems[index]?.quantity === 0}
-                                  placeholder="Any specific notes..."
-                                  className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
-                                />
-                              </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Condition
+                              </label>
+                              <select
+                                value={transactionItems[index]?.condition || "good"}
+                                onChange={(e) => handleConditionChange(index, e.target.value)}
+                                disabled={transactionItems[index]?.quantity === 0}
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                              >
+                                <option value="new">New</option>
+                                <option value="excellent">Excellent</option>
+                                <option value="good">Good</option>
+                                <option value="fair">Fair</option>
+                                <option value="poor">Poor</option>
+                              </select>
+                            </div>
+
+                            <div>
+                              <label className="block text-sm font-medium text-gray-700 mb-1">
+                                Notes (Optional)
+                              </label>
+                              <input
+                                type="text"
+                                value={transactionItems[index]?.notes || ""}
+                                onChange={(e) => handleItemNotesChange(index, e.target.value)}
+                                disabled={transactionItems[index]?.quantity === 0}
+                                placeholder="Any specific notes..."
+                                className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 disabled:bg-gray-100 disabled:text-gray-500"
+                              />
                             </div>
                           </div>
-                        );
-                      })}
+                        </div>
+                      ))}
                     </div>
                   </div>
-                  
+
                   <div className="mb-6">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Additional Notes (Optional)
@@ -754,7 +640,7 @@ const Inquiries: React.FC = () => {
                       className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500"
                     ></textarea>
                   </div>
-                  
+
                   <div className="flex justify-end gap-3">
                     <button
                       type="button"
@@ -800,15 +686,15 @@ interface RequestCardProps {
   isNearby: boolean;
 }
 
-const RequestCard: React.FC<RequestCardProps> = ({ 
-  request, 
-  formatDate, 
+const RequestCard: React.FC<RequestCardProps> = ({
+  request,
+  formatDate,
   onHelpClick,
   isNearby
 }) => {
   return (
     <div className={`bg-white rounded-lg shadow-md overflow-hidden border-t-4 ${
-      isNearby ? 'border-blue-500' : 'border-indigo-500'
+      isNearby ? "border-blue-500" : "border-indigo-500"
     }`}>
       <div className="p-4">
         <div className="flex justify-between items-start">
@@ -817,18 +703,18 @@ const RequestCard: React.FC<RequestCardProps> = ({
             Pending
           </span>
         </div>
-        
+
         <p className="text-sm text-gray-600 mt-1 flex items-center">
           <FiMapPin className="mr-1 text-gray-400" size={14} />
           {request.school.name}
         </p>
-        
+
         <p className="text-sm text-gray-500 mt-1 flex items-center">
           <FiCalendar className="mr-1 text-gray-400" size={14} />
           {formatDate(request.eventStartDate)}
           {request.eventEndDate && ` - ${formatDate(request.eventEndDate)}`}
         </p>
-        
+
         <div className="mt-3">
           <p className="text-xs font-medium text-gray-500 mb-1">Requested Items:</p>
           <div className="space-y-1">
@@ -846,7 +732,7 @@ const RequestCard: React.FC<RequestCardProps> = ({
           </div>
         </div>
       </div>
-      
+
       <div className="bg-gray-50 p-3 border-t border-gray-100">
         <button
           onClick={onHelpClick}

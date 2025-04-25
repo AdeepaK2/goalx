@@ -44,7 +44,16 @@ const equipmentTransactionSchema = new mongoose.Schema({
   providerType: { 
     type: String, 
     enum: ['school', 'GovernBody'], // Capital 'G' to match your model name
-    required: true
+    required: true,
+    // Add this getter/setter to enforce correct model mapping
+    set: function(value: string) {
+      // Store the value as-is
+      return value;
+    },
+    get: function(value: string) {
+      // When used for population, return the correct model name
+      return value === 'school' ? 'School' : value;
+    }
   },
   provider: { 
     type: mongoose.Schema.Types.ObjectId, 

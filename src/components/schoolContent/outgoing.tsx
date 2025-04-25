@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { FiSend, FiCheckCircle, FiAlertTriangle, FiArrowLeft } from "react-icons/fi";
+import { FiSend, FiCheckCircle, FiAlertTriangle, FiArrowLeft, FiFilter, FiBox, FiCalendar } from "react-icons/fi";
 import { formatDistance } from 'date-fns';
 import axios from "axios";
 
@@ -23,6 +23,11 @@ interface Recipient {
   schoolId: string;
 }
 
+interface Provider {
+  _id: string;
+  name?: string;
+}
+
 interface RentalDetails {
   startDate: string;
   returnDueDate: string;
@@ -33,6 +38,7 @@ interface Transaction {
   _id: string;
   transactionId: string;
   recipient: Recipient;
+  provider: Provider;
   transactionType: 'rental' | 'permanent';
   status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'returned';
   items: TransactionItem[];
@@ -42,10 +48,12 @@ interface Transaction {
 
 const Outgoing = () => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [filteredTransactions, setFilteredTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
   const [currentSchool, setCurrentSchool] = useState<{id: string} | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>("all");
 
   useEffect(() => {
     // First fetch the current school info
@@ -71,6 +79,7 @@ const Outgoing = () => {
     const fetchOutgoingTransactions = async (schoolId: string) => {
       try {
         setLoading(true);
+        console.log("Fetching transactions for school ID:", schoolId);
         
         // Fetch transactions where this school is the provider
         const response = await axios.get("/api/equipment/transaction", {
@@ -80,8 +89,18 @@ const Outgoing = () => {
           }
         });
         
+        console.log("API response:", response.data);
+        
         if (response.data && Array.isArray(response.data.transactions)) {
-          setTransactions(response.data.transactions);
+          // Further filter to ensure we only show transactions where this school is the provider
+          const schoolTransactions = response.data.transactions.filter(
+            (tx: Transaction) => tx.provider && tx.provider._id === schoolId
+          );
+          
+          console.log(`Filtered ${response.data.transactions.length} transactions to ${schoolTransactions.length} for this school`);
+          
+          setTransactions(schoolTransactions);
+          setFilteredTransactions(schoolTransactions);
         } else {
           throw new Error("Invalid response format");
         }
@@ -102,6 +121,35 @@ const Outgoing = () => {
 
     initialize();
   }, []);
+
+  // Apply status filter
+  useEffect(() => {
+    if (statusFilter === "all") {
+      setFilteredTransactions(transactions);
+    } else if (statusFilter === "active") {
+      // Show approved and not returned transactions
+      setFilteredTransactions(
+        transactions.filter(t => 
+          t.status === "approved" && 
+          (t.transactionType !== "rental" || !t.rentalDetails?.returnedDate)
+        )
+      );
+    } else if (statusFilter === "completed") {
+      // Show completed or returned transactions
+      setFilteredTransactions(
+        transactions.filter(t => 
+          t.status === "completed" || 
+          t.status === "returned" || 
+          (t.status === "approved" && t.rentalDetails?.returnedDate)
+        )
+      );
+    } else {
+      // Filter by specific status
+      setFilteredTransactions(
+        transactions.filter(t => t.status === statusFilter)
+      );
+    }
+  }, [statusFilter, transactions]);
 
   // Calculate if a rental item is overdue
   const isOverdue = (dueDate: string) => {
@@ -149,6 +197,16 @@ const Outgoing = () => {
     }
   };
 
+  // Count approved/given transactions
+  const approvedCount = transactions.filter(t => 
+    t.status === "approved" || t.status === "completed" || t.status === "returned"
+  ).length;
+
+  // Count total items given
+  const totalItemsGiven = transactions
+    .filter(t => t.status === "approved" || t.status === "completed" || t.status === "returned")
+    .reduce((total, t) => total + t.items.reduce((sum, item) => sum + item.quantity, 0), 0);
+
   return (
     <div>
       {/* Hero Section */}
@@ -164,8 +222,71 @@ const Outgoing = () => {
         </div>
       </div>
 
+      {/* Dashboard Stats */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 mb-6">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-indigo-100 rounded-md p-3">
+                  <FiSend className="h-6 w-6 text-indigo-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Total Transactions
+                    </dt>
+                    <dd className="text-3xl font-semibold text-gray-900">
+                      {transactions.length}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-green-100 rounded-md p-3">
+                  <FiCheckCircle className="h-6 w-6 text-green-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Equipment Provided
+                    </dt>
+                    <dd className="text-3xl font-semibold text-gray-900">
+                      {approvedCount}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            <div className="p-5">
+              <div className="flex items-center">
+                <div className="flex-shrink-0 bg-blue-100 rounded-md p-3">
+                  <FiBox className="h-6 w-6 text-blue-600" />
+                </div>
+                <div className="ml-5 w-0 flex-1">
+                  <dl>
+                    <dt className="text-sm font-medium text-gray-500 truncate">
+                      Total Items Given
+                    </dt>
+                    <dd className="text-3xl font-semibold text-gray-900">
+                      {totalItemsGiven}
+                    </dd>
+                  </dl>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 mb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center">
@@ -185,11 +306,30 @@ const Outgoing = () => {
                 </>
               )}
             </h2>
-            <div>
-              <span className="text-sm text-gray-500">
-                {loading ? 'Loading...' : `${transactions.length} transactions`}
-              </span>
-            </div>
+            
+            {!selectedTransaction && (
+              <div className="flex items-center">
+                <label htmlFor="status-filter" className="mr-2 text-sm text-gray-500">
+                  <FiFilter className="inline mr-1" /> Status:
+                </label>
+                <select
+                  id="status-filter"
+                  value={statusFilter}
+                  onChange={(e) => setStatusFilter(e.target.value)}
+                  className="form-select rounded-md border-gray-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+                >
+                  <option value="all">All</option>
+                  <option value="active">Currently Shared</option>
+                  <option value="completed">Completed</option>
+                  <option value="approved">Approved</option>
+                  <option value="pending">Pending</option>
+                  <option value="returned">Returned</option>
+                </select>
+                <span className="ml-4 text-sm text-gray-500">
+                  {loading ? 'Loading...' : `${filteredTransactions.length} transactions`}
+                </span>
+              </div>
+            )}
           </div>
 
           {loading ? (
@@ -226,14 +366,20 @@ const Outgoing = () => {
                   {selectedTransaction.rentalDetails && (
                     <>
                       <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                        Start: {formatDate(selectedTransaction.rentalDetails.startDate)}
+                        <FiCalendar className="mr-1" /> Start: {formatDate(selectedTransaction.rentalDetails.startDate)}
                       </span>
-                      <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                        Due: {formatDate(selectedTransaction.rentalDetails.returnDueDate)}
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${
+                        selectedTransaction.status === 'approved' && 
+                        !selectedTransaction.rentalDetails.returnedDate && 
+                        isOverdue(selectedTransaction.rentalDetails.returnDueDate) 
+                          ? "bg-red-100 text-red-800" 
+                          : "bg-gray-100 text-gray-800"
+                      }`}>
+                        <FiCalendar className="mr-1" /> Due: {formatDate(selectedTransaction.rentalDetails.returnDueDate)}
                       </span>
                       {selectedTransaction.rentalDetails.returnedDate && (
                         <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-green-100 text-green-800">
-                          Returned: {formatDate(selectedTransaction.rentalDetails.returnedDate)}
+                          <FiCalendar className="mr-1" /> Returned: {formatDate(selectedTransaction.rentalDetails.returnedDate)}
                         </span>
                       )}
                     </>
@@ -260,7 +406,7 @@ const Outgoing = () => {
                 ))}
               </div>
             </div>
-          ) : transactions.length === 0 ? (
+          ) : filteredTransactions.length === 0 ? (
             <div className="p-8 text-center">
               <p className="text-gray-500">No outgoing equipment transactions found.</p>
             </div>
@@ -295,8 +441,17 @@ const Outgoing = () => {
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {transactions.map(transaction => (
-                      <tr key={transaction._id} className="hover:bg-gray-50">
+                    {filteredTransactions.map(transaction => (
+                      <tr 
+                        key={transaction._id} 
+                        className={`hover:bg-gray-50 ${
+                          transaction.status === "approved" || 
+                          transaction.status === "completed" || 
+                          transaction.status === "returned" 
+                            ? "bg-blue-50" 
+                            : ""
+                        }`}
+                      >
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                           {transaction.transactionId}
                         </td>
@@ -312,6 +467,11 @@ const Outgoing = () => {
                           }`}>
                             {getStatusText(transaction.status, transaction.rentalDetails?.returnDueDate, transaction.transactionType)}
                           </span>
+                          {(transaction.status === "approved" || transaction.status === "completed" || transaction.status === "returned") && (
+                            <span className="ml-2 inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-blue-100 text-blue-800">
+                              Given
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                           {transaction.transactionType === 'rental' && transaction.rentalDetails ? (
@@ -320,6 +480,7 @@ const Outgoing = () => {
                               <br/>
                               <span className={
                                 transaction.status === 'approved' && 
+                                !transaction.rentalDetails.returnedDate &&
                                 isOverdue(transaction.rentalDetails.returnDueDate) ? 
                                 "text-red-600" : "text-gray-400"
                               }>
@@ -331,7 +492,11 @@ const Outgoing = () => {
                           )}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.items.length} {transaction.items.length === 1 ? 'item' : 'items'}
+                          {transaction.items.reduce((sum, item) => sum + item.quantity, 0)} items
+                          <br/>
+                          <span className="text-xs text-gray-400">
+                            {transaction.items.length} {transaction.items.length === 1 ? 'type' : 'types'}
+                          </span>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <button
