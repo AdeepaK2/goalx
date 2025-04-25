@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { SriLankanProvince, SriLankanDistrict } from '@/types/locationTypes';
+import { SriLankanProvince, SriLankanDistrict, ProvinceDistrictMap } from '@/types/locationTypes';
 import { useRouter } from 'next/navigation';
 
 const SchoolRegister = () => {
@@ -28,8 +28,12 @@ const SchoolRegister = () => {
 
   // Get districts based on selected province
   const getDistricts = () => {
-    // This would be populated from your locationTypes
-    return Object.values(SriLankanDistrict);
+    if (!formData.location.province) {
+      return []; // Return empty array if no province selected
+    }
+    
+    // Return only districts that belong to the selected province
+    return ProvinceDistrictMap[formData.location.province as SriLankanProvince] || [];
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -37,13 +41,26 @@ const SchoolRegister = () => {
     
     if (name.includes('.')) {
       const [parent, child] = name.split('.');
-      setFormData({
-        ...formData,
-        [parent]: {
-          ...formData[parent as keyof typeof formData] as any,
-          [child]: value
-        }
-      });
+      
+      // Special handling for province change - reset district
+      if (parent === 'location' && child === 'province') {
+        setFormData({
+          ...formData,
+          location: {
+            ...formData.location,
+            province: value,
+            district: '' // Reset district when province changes
+          }
+        });
+      } else {
+        setFormData({
+          ...formData,
+          [parent]: {
+            ...formData[parent as keyof typeof formData] as any,
+            [child]: value
+          }
+        });
+      }
     } else {
       setFormData({
         ...formData,
@@ -221,9 +238,14 @@ const SchoolRegister = () => {
                       required
                       value={formData.location.district}
                       onChange={handleChange}
-                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf] sm:text-sm text-black"
+                      disabled={!formData.location.province} // Disable if no province selected
+                      className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf] sm:text-sm text-black disabled:bg-gray-100 disabled:text-gray-500"
                     >
-                      <option value="">Select District</option>
+                      <option value="">
+                        {!formData.location.province 
+                          ? "Select a province first" 
+                          : "Select District"}
+                      </option>
                       {getDistricts().map(district => (
                         <option key={district} value={district}>{district}</option>
                       ))}
