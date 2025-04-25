@@ -1,666 +1,491 @@
-import React, { useState, useEffect } from "react";
-import { FiClock, FiCheckCircle, FiAlertTriangle, FiArrowLeft, FiPhone, FiMail, FiX } from "react-icons/fi";
-import { formatDistance } from 'date-fns';
+'use client';
 
-// Types for our data
-interface Equipment {
-  _id: string;
-  name: string;
-  equipmentId: string;
-}
+import React, { useState, useEffect } from 'react';
+import { FiChevronLeft, FiChevronRight, FiInfo, FiLoader } from 'react-icons/fi';
 
-interface TransactionItem {
-  equipment: Equipment;
-  quantity: number;
-  condition: string;
-  notes?: string;
-}
+// Transaction status colors
+const statusColors = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  approved: 'bg-blue-100 text-blue-800',
+  rejected: 'bg-red-100 text-red-800',
+  completed: 'bg-green-100 text-green-800',
+  cancelled: 'bg-gray-100 text-gray-800',
+  returned: 'bg-purple-100 text-purple-800'
+};
 
-interface Provider {
-  _id: string;
-  name: string;
-  schoolId?: string;
-  governBodyId?: string;
-  email?: string;
-  contact?: {
-    email?: string;
-    phone?: string;
-  };
-}
-
-interface RentalDetails {
-  startDate: string;
-  returnDueDate: string;
-  returnedDate?: string;
-}
-
+// Transaction type for type checking
 interface Transaction {
   _id: string;
   transactionId: string;
-  provider: Provider;
+  provider: {
+    _id: string;
+    name: string;
+    email?: string;
+  };
   providerType: 'school' | 'GovernBody';
   transactionType: 'rental' | 'permanent';
   status: 'pending' | 'approved' | 'rejected' | 'completed' | 'cancelled' | 'returned';
-  items: TransactionItem[];
-  rentalDetails?: RentalDetails;
+  items: Array<{
+    equipment: {
+      _id: string;
+      name: string;
+      equipmentId: string;
+    };
+    quantity: number;
+    condition: string;
+  }>;
+  rentalDetails?: {
+    startDate: string;
+    returnDueDate: string;
+    returnedDate?: string;
+  };
   createdAt: string;
 }
 
-interface School {
+// Add a new interface for cached provider data that includes email
+interface CachedProvider {
   _id: string;
-  schoolId: string;
-  name: string;
-  contact?: {
-    email?: string;
-    phone?: string;
-  };
-  location?: {
-    district?: string;
-    province?: string;
-    address?: string;
-  };
-}
-
-interface ProviderContact {
   name: string;
   email?: string;
-  phone?: string;
-  type: string;
 }
 
-const Borrowals = () => {
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
-  const [returnLoading, setReturnLoading] = useState(false);
-  const [showContactModal, setShowContactModal] = useState(false);
-  const [contactDetails, setContactDetails] = useState<ProviderContact | null>(null);
-  const [loadingContact, setLoadingContact] = useState(false);
-  const [contactError, setContactError] = useState<string | null>(null);
-  const [currentSchool, setCurrentSchool] = useState<School | null>(null);
-  const [schoolLoading, setSchoolLoading] = useState(true);
+// Format date in a readable form
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('en-US', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric'
+  });
+};
 
+const Borrowals: React.FC = () => {
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [error, setError] = useState<string | null>(null);
+  const [page, setPage] = useState<number>(1);
+  const [limit] = useState<number>(10);
+  const [totalPages, setTotalPages] = useState<number>(1);
+  const [statusFilter, setStatusFilter] = useState<string>('');
+  const [transactionTypeFilter, setTransactionTypeFilter] = useState<string>('');
+  const [toastMessage, setToastMessage] = useState<{message: string, type: 'success' | 'error'} | null>(null);
+  const [schoolId, setSchoolId] = useState<string | null>(null);
+  const [schoolsCache, setSchoolsCache] = useState<{[key: string]: CachedProvider}>({});
+  const [governBodyCache, setGovernBodyCache] = useState<{[key: string]: CachedProvider}>({});
+
+  // Fetch current school info first
   useEffect(() => {
-    const fetchCurrentSchool = async () => {
+    const fetchSchoolInfo = async () => {
       try {
-        setSchoolLoading(true);
+        const response = await fetch('/api/auth/school/me');
+        const data = await response.json();
         
-        // Step 1: Get current authenticated school
-        const meResponse = await fetch('/api/auth/school/me');
-        if (!meResponse.ok) {
-          throw new Error("Failed to authenticate school");
+        if (!response.ok) {
+          throw new Error(data.error || 'Failed to fetch school information');
         }
         
-        const meData = await meResponse.json();
-        if (!meData.success || !meData.school?.id) {
-          throw new Error("Failed to get school ID");
-        }
-        
-        const schoolId = meData.school.id;
-        
-        // Step 2: Get full school details
-        const schoolResponse = await fetch(`/api/school?id=${schoolId}`);
-        if (!schoolResponse.ok) {
-          throw new Error("Failed to fetch school details");
-        }
-        
-        const schoolData = await schoolResponse.json();
-        setCurrentSchool(schoolData);
-        
-        // Step 3: Fetch transactions for this school
-        await fetchTransactions(schoolId);
-        
+        setSchoolId(data.school.id);
       } catch (err) {
-        console.error("Error fetching school data:", err);
-        setError("Failed to load school information. Please try again or check your login status.");
-      } finally {
-        setSchoolLoading(false);
+        setError(err instanceof Error ? err.message : 'Failed to authenticate');
+        setToastMessage({
+          message: 'Could not identify your school. Please try logging in again.',
+          type: 'error'
+        });
+        setTimeout(() => setToastMessage(null), 5000);
       }
     };
     
-    fetchCurrentSchool();
+    fetchSchoolInfo();
   }, []);
-  
-  const fetchTransactions = async (schoolId: string) => {
+
+  // Fetch transactions
+  const fetchTransactions = async () => {
+    if (!schoolId) return;
+    
+    setLoading(true);
     try {
-      setLoading(true);
-      // Fetch ALL transactions where this school is the recipient
-      const response = await fetch(`/api/equipment/transaction?recipient=${schoolId}`);
+      let url = `/api/equipment/transaction?recipient=${schoolId}&page=${page}&limit=${limit}`;
       
-      if (!response.ok) {
-        throw new Error("Failed to fetch borrowals");
+      if (statusFilter) {
+        url += `&status=${statusFilter}`;
       }
       
+      if (transactionTypeFilter) {
+        url += `&transactionType=${transactionTypeFilter}`;
+      }
+      
+      const response = await fetch(url);
       const data = await response.json();
-      setTransactions(data.transactions || []);
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to fetch transactions');
+      }
+      
+      // Process transactions to fetch provider info including email
+      const validTransactions = await Promise.all((data.transactions || []).map(async (transaction: Transaction) => {
+        // If provider is not properly populated
+        if (!transaction.provider || typeof transaction.provider !== 'object') {
+          // Make sure providerId is a string, not null or undefined
+          const providerId = transaction.provider ? String(transaction.provider) : null;
+          
+          // Skip fetching if providerId is null
+          if (!providerId) {
+            return {
+              ...transaction,
+              provider: { 
+                _id: 'unknown', 
+                name: 'Unknown Provider' 
+              }
+            };
+          }
+          
+          // Handle school provider
+          if (transaction.providerType === 'school') {
+            // Check if we already have this school in cache
+            if (schoolsCache[providerId]) {
+              return {
+                ...transaction,
+                provider: schoolsCache[providerId]
+              };
+            }
+            
+            // Fetch the school info
+            try {
+              const schoolResponse = await fetch(`/api/school?id=${providerId}`);
+              
+              if (!schoolResponse.ok) {
+                console.error(`Failed to fetch school (ID: ${providerId}):`, schoolResponse.status);
+                return {
+                  ...transaction,
+                  provider: { _id: providerId, name: `School (ID: ${providerId})` }
+                };
+              }
+              
+              const schoolData = await schoolResponse.json();
+              
+              if (schoolData) {
+                // Extract email from school data
+                const email = schoolData.contact?.email;
+                
+                // Create provider object
+                const providerObj = { 
+                  _id: providerId, 
+                  name: schoolData.name || `School (ID: ${providerId})`,
+                  email: email 
+                };
+                
+                // Update our schools cache
+                setSchoolsCache(prev => ({
+                  ...prev,
+                  [providerId]: providerObj
+                }));
+                
+                // Return the transaction with populated provider
+                return {
+                  ...transaction,
+                  provider: providerObj
+                };
+              }
+            } catch (err) {
+              console.error('Error fetching school details:', err);
+            }
+          } 
+          // Handle government body provider
+          else if (transaction.providerType === 'GovernBody') {
+            // Check if we already have this gov body in cache
+            if (governBodyCache[providerId]) {
+              return {
+                ...transaction,
+                provider: governBodyCache[providerId]
+              };
+            }
+            
+            // Fetch the governing body info
+            try {
+              const govResponse = await fetch(`/api/govern?id=${providerId}`);
+              const govData = await govResponse.json();
+              
+              if (govResponse.ok && govData) {
+                // Update our gov bodies cache
+                setGovernBodyCache(prev => ({
+                  ...prev,
+                  [providerId]: { 
+                    _id: providerId, 
+                    name: govData.name,
+                    email: govData.email 
+                  }
+                }));
+                
+                // Return the transaction with populated provider
+                return {
+                  ...transaction,
+                  provider: { 
+                    _id: providerId, 
+                    name: govData.name,
+                    email: govData.email 
+                  }
+                };
+              }
+            } catch (err) {
+              console.error('Error fetching governing body details:', err);
+            }
+          }
+        }
+        
+        return transaction;
+      }));
+      
+      setTransactions(validTransactions);
+      setTotalPages(data.pagination?.pages || 1);
     } catch (err) {
-      console.error("Error fetching borrowals:", err);
-      setError("Failed to load borrowed equipment. Please try again.");
+      setError(err instanceof Error ? err.message : 'An unknown error occurred');
+      setToastMessage({
+        message: err instanceof Error ? err.message : 'Failed to load transactions',
+        type: 'error'
+      });
+      setTimeout(() => setToastMessage(null), 5000);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleReturnEquipment = async (transaction: Transaction) => {
-    if (!window.confirm("Are you sure you want to mark this as returned?")) {
+  // Helper function to open email client
+  const handleContactProvider = (email?: string, providerName?: string) => {
+    if (!email) {
+      setToastMessage({
+        message: 'Email address not available for this provider',
+        type: 'error'
+      });
+      setTimeout(() => setToastMessage(null), 5000);
       return;
     }
     
-    try {
-      setReturnLoading(true);
-      
-      const response = await fetch(`/api/equipment/transaction?id=${transaction.transactionId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: JSON.stringify({
-          status: 'returned',
-          rentalDetails: {
-            returnedDate: new Date().toISOString()
-          }
-        })
-      });
+    window.location.href = `mailto:${email}?subject=Regarding Equipment Transaction&body=Hello ${providerName || 'Provider'},`;
+  };
 
-      if (!response.ok) {
-        throw new Error("Failed to update transaction");
-      }
-      
-      // Update local state
-      setTransactions(prev => 
-        prev.map(t => t._id === transaction._id ? {...t, status: 'returned'} : t)
-      );
-
-      // Show confirmation
-      alert("Equipment successfully marked as returned!");
-      setSelectedTransaction(null);
-      
-    } catch (err) {
-      console.error("Error returning equipment:", err);
-      alert("Failed to mark equipment as returned. Please try again.");
-    } finally {
-      setReturnLoading(false);
+  // Effect to fetch transactions when schoolId, filters or page changes
+  useEffect(() => {
+    if (schoolId) {
+      fetchTransactions();
     }
+  }, [schoolId, page, statusFilter, transactionTypeFilter]);
+
+  // Handle filter changes
+  const handleStatusChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setStatusFilter(e.target.value);
+    setPage(1); // Reset to first page when filter changes
   };
 
-  const fetchProviderContact = async (transaction: Transaction) => {
-    setLoadingContact(true);
-    setContactError(null);
-    
-    try {
-      let endpoint = '';
-      let entityId = transaction.provider._id;
-      
-      // Determine which API to call based on provider type
-      if (transaction.providerType === 'school') {
-        endpoint = `/api/school?id=${entityId}`;
-      } else {
-        endpoint = `/api/govern?id=${entityId}`;
-      }
-      
-      const response = await fetch(endpoint);
-      
-      if (!response.ok) {
-        throw new Error(`Failed to fetch contact information`);
-      }
-      
-      const data = await response.json();
-      
-      // Extract contact details based on provider type
-      let contactInfo: ProviderContact = {
-        name: transaction.provider.name,
-        type: transaction.providerType === 'school' ? 'School' : 'Governing Body'
-      };
-      
-      if (transaction.providerType === 'school') {
-        const school = data.school || data; // Handle different API response formats
-        contactInfo.email = school.contact?.email;
-        contactInfo.phone = school.contact?.phone;
-      } else {
-        const governBody = data.governBody || data;
-        contactInfo.email = governBody.email;
-        contactInfo.phone = governBody.contact?.phone;
-      }
-      
-      setContactDetails(contactInfo);
-      setShowContactModal(true);
-      
-    } catch (err) {
-      console.error("Error fetching provider contact:", err);
-      setContactError("Could not retrieve contact information. Please try again.");
-    } finally {
-      setLoadingContact(false);
-    }
+  const handleTypeChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    setTransactionTypeFilter(e.target.value);
+    setPage(1); // Reset to first page when filter changes
   };
 
-  // Calculate if an item is overdue
-  const isOverdue = (dueDate: string) => {
-    return new Date(dueDate) < new Date();
+  // Pagination handlers
+  const handlePrevPage = () => {
+    if (page > 1) setPage(page - 1);
   };
 
-  // Format relative date (e.g., "2 days ago" or "in 3 days")
-  const formatRelativeDate = (dateString: string) => {
-    try {
-      const date = new Date(dateString);
-      return formatDistance(date, new Date(), { addSuffix: true });
-    } catch (e) {
-      return dateString;
-    }
+  const handleNextPage = () => {
+    if (page < totalPages) setPage(page + 1);
   };
-
-  // Get CSS classes for status badge
-  const getStatusClass = (status: string, dueDate?: string) => {
-    if (status === 'returned') return "bg-green-100 text-green-800";
-    if (status === 'pending') return "bg-yellow-100 text-yellow-800";
-    if (status === 'rejected') return "bg-red-100 text-red-800";
-    if (status === 'cancelled') return "bg-gray-100 text-gray-800";
-    if (status === 'approved' && dueDate && isOverdue(dueDate)) return "bg-red-100 text-red-800";
-    return "bg-blue-100 text-blue-800";
-  };
-
-  // Get status text
-  const getStatusText = (status: string, dueDate?: string) => {
-    if (status === 'returned') return "Returned";
-    if (status === 'pending') return "Pending";
-    if (status === 'rejected') return "Rejected";
-    if (status === 'cancelled') return "Cancelled";
-    if (status === 'completed') return "Completed";
-    if (status === 'approved' && dueDate && isOverdue(dueDate)) return "Overdue";
-    return "Active";
-  };
-
-  // Loading screen for entire component while getting school data
-  if (schoolLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-center">
-          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
-          <p className="mt-4 text-gray-600">Loading your account information...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Error screen if we couldn't get the school info
-  if (!currentSchool && !loading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-4">
-        <div className="text-center max-w-md bg-red-50 p-8 rounded-lg shadow">
-          <FiAlertTriangle className="mx-auto h-16 w-16 text-red-500" />
-          <h2 className="mt-4 text-xl font-bold text-red-700">Authentication Error</h2>
-          <p className="mt-2 text-red-600">
-            {error || "Unable to load your school information. Please make sure you're logged in."}
-          </p>
-          <button 
-            onClick={() => window.location.reload()} 
-            className="mt-6 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-          >
-            Try Again
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div>
-      {/* Hero Section */}
       <div className="bg-gradient-to-r from-[#6e11b0] to-[#1e0fbf] px-6 py-16 md:py-24">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
             Equipment Borrowals
           </h1>
-          {currentSchool && (
-            <h2 className="text-2xl md:text-3xl font-medium text-blue-100 mt-3 text-center">
-              {currentSchool.name}
-            </h2>
-          )}
           <p className="text-blue-100 text-xl mt-4 text-center max-w-2xl mx-auto">
-            Track equipment borrowed by your school. Ensure timely
-            returns to maintain good relationships with our partners.
+            Track all equipment that has been provided to your school
           </p>
         </div>
       </div>
 
-      {/* School info summary */}
-      {currentSchool && (
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 mb-6">
-          <div className="bg-white shadow rounded-lg p-6 border-l-4 border-[#1e0fbf]">
-            <div className="flex flex-col md:flex-row justify-between">
-              <div>
-                <h3 className="text-lg font-medium text-gray-900">School ID: {currentSchool.schoolId}</h3>
-                <p className="mt-1 text-sm text-gray-500">
-                  Location: {currentSchool.location?.district}, {currentSchool.location?.province}
-                </p>
-              </div>
-              {currentSchool.contact && (
-                <div className="mt-4 md:mt-0 text-sm text-gray-600">
-                  {currentSchool.contact.email && (
-                    <div className="flex items-center mb-1">
-                      <FiMail className="mr-2 text-gray-400" /> {currentSchool.contact.email}
-                    </div>
-                  )}
-                  {currentSchool.contact.phone && (
-                    <div className="flex items-center">
-                      <FiPhone className="mr-2 text-gray-400" /> {currentSchool.contact.phone}
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
-        <div className="bg-white shadow rounded-lg overflow-hidden">
-          <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
-            <h2 className="text-lg font-semibold text-gray-800 flex items-center">
-              {selectedTransaction ? (
-                <>
-                  <button 
-                    onClick={() => setSelectedTransaction(null)}
-                    className="mr-2 p-1 rounded-full hover:bg-indigo-100"
-                  >
-                    <FiArrowLeft />
-                  </button>
-                  Transaction Details
-                </>
-              ) : (
-                <>
-                  <FiClock className="mr-2 text-[#1e0fbf]" /> Borrowed Equipment
-                </>
-              )}
-            </h2>
-            <div>
-              <span className="text-sm text-gray-500">
-                {loading ? 'Loading...' : `${transactions.length} total transactions`}
-              </span>
-            </div>
-          </div>
-
-          {loading ? (
-            <div className="p-8 text-center">
-              <div className="inline-block animate-spin rounded-full h-8 w-8 border-4 border-indigo-500 border-t-transparent"></div>
-              <p className="mt-2 text-gray-600">Loading borrowed equipment data...</p>
-            </div>
-          ) : error ? (
-            <div className="p-8 text-center bg-red-50">
-              <FiAlertTriangle className="mx-auto h-12 w-12 text-red-500" />
-              <p className="mt-2 text-red-700">{error}</p>
-              <button 
-                onClick={() => window.location.reload()} 
-                className="mt-3 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-              >
-                Try Again
-              </button>
-            </div>
-          ) : selectedTransaction ? (
-            // Transaction detail view
-            <div className="p-5">
-              <div className="mb-5 pb-5 border-b">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-medium text-gray-900">{selectedTransaction.transactionId}</h3>
-                    <p className="text-gray-500">From: {selectedTransaction.provider.name}</p>
-                    <div className="mt-3 flex flex-wrap gap-3">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium ${getStatusClass(selectedTransaction.status, selectedTransaction.rentalDetails?.returnDueDate)}`}>
-                        {getStatusText(selectedTransaction.status, selectedTransaction.rentalDetails?.returnDueDate)}
-                      </span>
-                      
-                      {selectedTransaction.rentalDetails && (
-                        <>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                            Start: {new Date(selectedTransaction.rentalDetails.startDate).toLocaleDateString()}
-                          </span>
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-md text-sm font-medium bg-gray-100 text-gray-800">
-                            Due: {new Date(selectedTransaction.rentalDetails.returnDueDate).toLocaleDateString()}
-                          </span>
-                        </>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    onClick={() => fetchProviderContact(selectedTransaction)}
-                    disabled={loadingContact}
-                    className="inline-flex items-center px-3 py-2 bg-gray-100 text-gray-800 text-sm font-medium rounded-md hover:bg-gray-200 focus:outline-none transition"
-                  >
-                    {loadingContact ? (
-                      <>
-                        <span className="mr-2 inline-block h-4 w-4 rounded-full border-2 border-gray-800 border-t-transparent animate-spin"></span>
-                        Loading...
-                      </>
-                    ) : (
-                      <>
-                        <FiPhone className="mr-1.5" /> Contact Provider
-                      </>
-                    )}
-                  </button>
-                </div>
-              </div>
-
-              <h4 className="font-medium text-gray-900 mb-3">Equipment Items</h4>
-              <div className="space-y-3 mb-6">
-                {selectedTransaction.items.map((item, idx) => (
-                  <div key={idx} className="bg-gray-50 p-4 rounded-md">
-                    <div className="flex justify-between">
-                      <span className="font-medium">{item.equipment.name}</span>
-                      <span className="text-gray-600">Quantity: {item.quantity}</span>
-                    </div>
-                    <div className="mt-2 flex justify-between text-sm">
-                      <span className="text-gray-500">Condition: {item.condition}</span>
-                      <span className="text-gray-500">ID: {item.equipment.equipmentId}</span>
-                    </div>
-                    {item.notes && (
-                      <p className="mt-2 text-sm text-gray-500">Notes: {item.notes}</p>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {selectedTransaction.status === 'approved' && selectedTransaction.transactionType === 'rental' && (
-                <div className="mt-5 flex justify-end">
-                  <button
-                    onClick={() => handleReturnEquipment(selectedTransaction)}
-                    disabled={returnLoading}
-                    className="inline-flex items-center px-4 py-2 bg-[#1e0fbf] text-white text-sm font-medium rounded-md hover:bg-[#6e11b0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] transition"
-                  >
-                    {returnLoading ? (
-                      <>
-                        <span className="mr-2 inline-block h-4 w-4 rounded-full border-2 border-white border-t-transparent animate-spin"></span>
-                        Processing...
-                      </>
-                    ) : (
-                      <>
-                        <FiCheckCircle className="mr-1.5" /> Mark as Returned
-                      </>
-                    )}
-                  </button>
-                </div>
-              )}
-            </div>
-          ) : transactions.length === 0 ? (
-            <div className="p-8 text-center">
-              <p className="text-gray-500">No borrowed equipment found.</p>
-            </div>
-          ) : (
-            // List view
-            <div className="p-5">
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        ID
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Provider
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Due Date
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Items
-                      </th>
-                      <th scope="col" className="relative px-6 py-3">
-                        <span className="sr-only">Actions</span>
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {transactions.map(transaction => (
-                      <tr key={transaction._id} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                          {transaction.transactionId}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.provider.name}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.transactionType === 'rental' ? 'Rental' : 'Permanent'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium ${
-                            getStatusClass(transaction.status, transaction.rentalDetails?.returnDueDate)
-                          }`}>
-                            {getStatusText(transaction.status, transaction.rentalDetails?.returnDueDate)}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.rentalDetails ? (
-                            <>
-                              {new Date(transaction.rentalDetails.returnDueDate).toLocaleDateString()}
-                              <br/>
-                              <span className={isOverdue(transaction.rentalDetails.returnDueDate) ? "text-red-600" : "text-gray-400"}>
-                                {formatRelativeDate(transaction.rentalDetails.returnDueDate)}
-                              </span>
-                            </>
-                          ) : (
-                            "N/A"
-                          )}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {transaction.items.length} {transaction.items.length === 1 ? 'item' : 'items'}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                          <button
-                            onClick={() => setSelectedTransaction(transaction)}
-                            className="text-indigo-600 hover:text-indigo-900"
-                          >
-                            View
-                          </button>
-                          {transaction.status === 'approved' && transaction.transactionType === 'rental' && (
-                            <button
-                              onClick={() => handleReturnEquipment(transaction)}
-                              disabled={returnLoading}
-                              className="ml-3 text-green-600 hover:text-green-900"
-                            >
-                              Return
-                            </button>
-                          )}
-                          <button
-                            onClick={() => fetchProviderContact(transaction)}
-                            disabled={loadingContact}
-                            className="ml-3 text-blue-600 hover:text-blue-900"
-                          >
-                            Contact
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Contact Modal */}
-      {showContactModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4 relative">
-            <button
-              onClick={() => setShowContactModal(false)}
-              className="absolute top-3 right-3 text-gray-400 hover:text-gray-600"
-            >
-              <FiX className="h-5 w-5" />
-            </button>
-            
-            <h3 className="text-lg font-medium text-gray-900 mb-4 pr-6">
-              Provider Contact Information
-            </h3>
-            
-            {contactError ? (
-              <div className="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-center">
-                {contactError}
-              </div>
-            ) : !contactDetails ? (
-              <div className="flex justify-center items-center p-4">
-                <div className="inline-block animate-spin rounded-full h-6 w-6 border-4 border-indigo-500 border-t-transparent"></div>
-                <p className="ml-2 text-gray-600">Loading contact details...</p>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="border-b pb-2">
-                  <h4 className="font-medium text-[#1e0fbf]">{contactDetails.name}</h4>
-                  <p className="text-sm text-gray-500">{contactDetails.type}</p>
-                </div>
-                
-                <div className="space-y-3">
-                  {contactDetails.email && (
-                    <div className="flex items-center">
-                      <FiMail className="text-gray-500 mr-3" />
-                      <div>
-                        <p className="text-sm text-gray-500">Email</p>
-                        <a href={`mailto:${contactDetails.email}`} className="text-blue-600 hover:underline">
-                          {contactDetails.email}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {contactDetails.phone && (
-                    <div className="flex items-center">
-                      <FiPhone className="text-gray-500 mr-3" />
-                      <div>
-                        <p className="text-sm text-gray-500">Phone</p>
-                        <a href={`tel:${contactDetails.phone}`} className="text-blue-600 hover:underline">
-                          {contactDetails.phone}
-                        </a>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {!contactDetails.email && !contactDetails.phone && (
-                    <p className="text-center text-gray-500 italic">
-                      No contact information available
-                    </p>
-                  )}
-                </div>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10">
+        <div className="grid grid-cols-1 gap-6">
+          <div className="bg-white shadow rounded-lg overflow-hidden">
+            {/* Toast notification */}
+            {toastMessage && (
+              <div className={`p-3 ${toastMessage.type === 'error' ? 'bg-red-50 border-red-200 text-red-700' : 'bg-green-50 border-green-200 text-green-700'} border rounded mb-4`}>
+                {toastMessage.message}
               </div>
             )}
             
-            <div className="mt-5 flex justify-end">
-              <button
-                type="button"
-                onClick={() => setShowContactModal(false)}
-                className="px-4 py-2 bg-gray-200 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-300 focus:outline-none"
-              >
-                Close
-              </button>
+            {/* Filters */}
+            <div className="p-5 bg-purple-50 border-b border-purple-100 flex flex-wrap gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select 
+                  className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  value={statusFilter}
+                  onChange={handleStatusChange}
+                >
+                  <option value="">All Statuses</option>
+                  <option value="pending">Pending</option>
+                  <option value="approved">Approved</option>
+                  <option value="rejected">Rejected</option>
+                  <option value="completed">Completed</option>
+                  <option value="cancelled">Cancelled</option>
+                  <option value="returned">Returned</option>
+                </select>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Transaction Type</label>
+                <select 
+                  className="block w-full border border-gray-300 rounded-md shadow-sm py-2 px-3 text-gray-700 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  value={transactionTypeFilter}
+                  onChange={handleTypeChange}
+                >
+                  <option value="">All Types</option>
+                  <option value="rental">Rental</option>
+                  <option value="permanent">Permanent</option>
+                </select>
+              </div>
+            </div>
+            
+            {/* Transactions Content */}
+            <div className="p-5">
+              {loading && transactions.length === 0 ? (
+                <div className="flex justify-center items-center p-8">
+                  <FiLoader className="animate-spin text-[#6e11b0] mr-2" size={20} />
+                  <span>Loading transactions...</span>
+                </div>
+              ) : error && transactions.length === 0 ? (
+                <div className="p-4 border border-red-200 rounded bg-red-50 text-red-700 text-center">
+                  {error}
+                  <button 
+                    onClick={fetchTransactions}
+                    className="mt-2 px-4 py-2 bg-red-100 text-red-800 text-sm font-medium rounded-md hover:bg-red-200"
+                  >
+                    Try Again
+                  </button>
+                </div>
+              ) : transactions.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">ID</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Provider</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Items</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                        {transactionTypeFilter !== 'permanent' && <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Return Due</th>}
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {transactions.map((transaction) => (
+                        <tr key={transaction._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{transaction.transactionId}</td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            <div className="flex items-center">
+                              {transaction.provider && typeof transaction.provider === 'object' ? 
+                                <div className="flex items-center gap-2">
+                                  <span>{transaction.provider.name}</span>
+                                  <button
+                                    onClick={() => handleContactProvider(
+                                      (transaction.provider as CachedProvider).email,
+                                      transaction.provider.name
+                                    )}
+                                    className="p-1 text-blue-600 hover:text-blue-800 rounded-full hover:bg-blue-50"
+                                    title="Contact provider"
+                                  >
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                      <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"></path>
+                                      <polyline points="22,6 12,13 2,6"></polyline>
+                                    </svg>
+                                  </button>
+                                </div>
+                                : 
+                                <span className="italic text-gray-400">Unknown provider</span>
+                              }
+                              <div className="group relative ml-1">
+                                <FiInfo size={14} className="text-gray-400" />
+                                <div className="hidden group-hover:block absolute z-10 w-48 p-2 mt-1 text-xs bg-white rounded-md shadow-lg border border-gray-100">
+                                  {transaction.providerType === 'school' ? 'School' : 'Government Body'}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {transaction.items.slice(0, 2).map((item, idx) => (
+                              <p key={idx} className="text-sm">
+                                {item.quantity}x {item.equipment && typeof item.equipment === 'object' ? 
+                                  item.equipment.name : 
+                                  <span className="italic">Unknown item</span>
+                                }
+                              </p>
+                            ))}
+                            {transaction.items.length > 2 && (
+                              <p className="text-xs text-gray-400">
+                                +{transaction.items.length - 2} more
+                              </p>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {transaction.transactionType === 'rental' ? 'Rental' : 'Permanent'}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusColors[transaction.status]}`}>
+                              {transaction.status.charAt(0).toUpperCase() + transaction.status.slice(1)}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDate(transaction.createdAt)}
+                          </td>
+                          {transactionTypeFilter !== 'permanent' && (
+                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {transaction.transactionType === 'rental' && transaction.rentalDetails?.returnDueDate ? (
+                                formatDate(transaction.rentalDetails.returnDueDate)
+                              ) : (
+                                '-'
+                              )}
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="flex justify-center items-center h-56 bg-gray-50 rounded-md text-gray-500">
+                  No transactions found
+                </div>
+              )}
+              
+              {/* Pagination */}
+              {transactions.length > 0 && (
+                <div className="flex justify-between items-center mt-6">
+                  <p className="text-sm text-gray-700">
+                    Page {page} of {totalPages}
+                  </p>
+                  <div className="flex space-x-2">
+                    <button
+                      onClick={handlePrevPage}
+                      disabled={page === 1}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm rounded-md bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <FiChevronLeft className="mr-1" />
+                      Prev
+                    </button>
+                    <button
+                      onClick={handleNextPage}
+                      disabled={page === totalPages}
+                      className="inline-flex items-center px-3 py-2 border border-gray-300 text-sm rounded-md bg-white text-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      Next
+                      <FiChevronRight className="ml-1" />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
-      )}
+      </div>
     </div>
   );
 };
