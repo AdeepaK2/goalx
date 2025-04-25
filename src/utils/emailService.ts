@@ -44,6 +44,58 @@ export const generateVerificationToken = async (): Promise<string> => {
   return Math.floor(1000 + Math.random() * 9000).toString();
 };
 
+// Add this function to create a consistent email footer
+
+const createEmailFooter = (baseUrl: string) => {
+  // Use absolute URL with https for the logo
+  const logoUrl = `${baseUrl}/logo.png`;
+  
+  return `
+    <div style="margin-top: 30px; border-top: 1px solid #e0e0e0; padding-top: 20px;">
+      <table width="100%" cellpadding="0" cellspacing="0" border="0">
+        <tr>
+          <td>
+            <!-- Replace flex with table layout for better email client compatibility -->
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="40">
+                  <img src="${logoUrl}" alt="GoalX" style="width: 40px; height: 40px; border-radius: 50%; display: block;" />
+                </td>
+                <td style="padding-left: 10px;">
+                  <span style="font-size: 16px; font-weight: bold; color: #1e0fbf; display: block;">GoalX</span>
+                </td>
+              </tr>
+            </table>
+            <p style="font-size: 14px; color: #666666; margin-top: 8px;">Making sports equipment accessible to all schools.</p>
+          </td>
+        </tr>
+        <tr>
+          <td style="padding-top: 15px;">
+            <!-- Replace flex with table layout here too -->
+            <table cellpadding="0" cellspacing="0" border="0">
+              <tr>
+                <td width="30">
+                  <img src="${logoUrl}" alt="GoalX" style="width: 30px; height: 30px; border-radius: 50%; display: block;" />
+                </td>
+                <td style="padding-left: 8px;">
+                  <span style="font-size: 14px; color: #666666; display: block;">Powered by</span>
+                </td>
+              </tr>
+            </table>
+            <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 12px; background-color: #ffffff; margin-top: 10px;">
+              <p style="font-size: 14px; color: #666666; margin: 0;">
+                <!-- Sponsor name placeholder -->
+                Your sponsor name here
+              </p>
+            </div>
+            <p style="font-size: 12px; color: #999999; margin-top: 15px;">© ${new Date().getFullYear()} GoalX. All rights reserved.</p>
+          </td>
+        </tr>
+      </table>
+    </div>
+  `;
+};
+
 // Send verification email with 4-digit code
 export const sendVerificationEmail = async (
   email: string,
@@ -123,6 +175,8 @@ export const sendVerificationEmail = async (
         <p style="line-height: 1.6; color: #333333;">This verification code will expire in 24 hours.</p>
 
         <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
+        
+        ${createEmailFooter(baseUrl)}
     </div>
   `;
 
@@ -208,6 +262,7 @@ export const sendSchoolVerificationEmail = async (
 
         <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
+    ${createEmailFooter(baseUrl)}
 </div>
   `;
 
@@ -293,6 +348,7 @@ export const sendGovernBodyVerificationEmail = async (
 
       <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
     </div>
+    ${createEmailFooter(baseUrl)}
   `;
 
   await sendEmail(email, 'Verify your GoalX Governing Body account', htmlContent);
@@ -367,40 +423,11 @@ export const sendWelcomeEmail = async (
 
                 <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
               </div>
+              ${createEmailFooter(baseUrl)}
   `;
 
   await sendEmail(email, 'Welcome to GoalX!', htmlContent);
 };
-
-// // Send password reset email
-// export const sendPasswordResetEmail = async (
-//   email: string,
-//   resetToken: string,
-//   displayName: string
-// ): Promise<void> => {
-//   const baseUrl = await getBaseUrl();
-//   const resetUrl = `${baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-  
-//   const htmlContent = `
-//     <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-//       <h2>Reset Your Password</h2>
-//       <p>Hello ${displayName},</p>
-//       <p>We received a request to reset your password. If you didn't make this request, you can safely ignore this email.</p>
-      
-//       <div style="text-align: center; margin: 30px 0;">
-//         <a href="${resetUrl}" style="background-color: #1e0fbf; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">
-//           Reset Password
-//         </a>
-//       </div>
-      
-//       <p>This link will expire in 1 hour for security reasons.</p>
-      
-//       <p>Best regards,<br>The GoalX Team</p>
-//     </div>
-//   `;
-
-//   await sendEmail(email, 'Reset Your GoalX Password', htmlContent);
-// };
 
 // Send donation confirmation email
 export const sendDonationConfirmationEmail = async (
@@ -485,6 +512,7 @@ export const sendDonationConfirmationEmail = async (
         <p style="line-height: 1.6; color: #333333;">You can view all your donations in your <a href="${donationsUrl}" style="color: #1e0fbf; text-decoration: none;">donation history</a>.</p>
 
         <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
+        ${createEmailFooter(baseUrl)}
       </div>
   `;
 
@@ -500,6 +528,7 @@ export const sendNotificationEmail = async (
   actionUrl?: string,
   actionText?: string
 ): Promise<void> => {
+  const baseUrl = await getBaseUrl();
   let actionButton = '';
   
   if (actionUrl && actionText) {
@@ -521,6 +550,7 @@ export const sendNotificationEmail = async (
       ${actionButton}
       
       <p>Best regards,<br>The GoalX Team</p>
+      ${createEmailFooter(baseUrl)}
     </div>
   `;
 
@@ -589,6 +619,7 @@ export const sendSchoolRegistrationNotificationEmail = async (
         <p style="line-height: 1.6; color: #333333;">If you have any questions, please don't hesitate to contact our support team.</p>
 
         <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
+        ${createEmailFooter(baseUrl)}
     </div>
   `;
 
@@ -657,6 +688,7 @@ export const sendGovernBodyRegistrationNotificationEmail = async (
         <p style="line-height: 1.6; color: #333333;">If you have any questions, please don't hesitate to contact our support team.</p>
 
         <p class="footer" style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
+        ${createEmailFooter(baseUrl)}
     </div>
   `;
 
@@ -750,6 +782,7 @@ export const sendPasswordResetEmail = async (
         <div class="footer">
             <p>Best regards,<br>The GoalX Team</p>
         </div>
+        ${createEmailFooter(baseUrl)}
       </div>
   `;
 

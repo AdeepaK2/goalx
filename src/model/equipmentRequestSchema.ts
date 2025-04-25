@@ -24,7 +24,10 @@ interface IEquipmentRequest extends mongoose.Document {
   createdAt: Date;
   updatedAt: Date;
   processedAt?: Date;
-  processedBy?: string;
+  processedBy?: {
+    entity: mongoose.Types.ObjectId;
+    entityType: 'School' | 'GovernBody' | 'User';
+  } | string; // Keep string for backward compatibility
 }
 
 const counterSchema = new mongoose.Schema({
@@ -120,8 +123,18 @@ const equipmentRequestSchema = new mongoose.Schema({
     type: Date
   },
   processedBy: {
-    type: String,
-    trim: true
+    type: mongoose.Schema.Types.Mixed,
+    validate: {
+      validator: function(v: any) {
+        // Skip validation if it's a string (legacy data)
+        if (typeof v === 'string') return true;
+        
+        // For new data format, validate the structure
+        return v && (v.entity instanceof mongoose.Types.ObjectId || mongoose.Types.ObjectId.isValid(v.entity)) && 
+               ['School', 'GovernBody', 'User'].includes(v.entityType);
+      },
+      message: 'ProcessedBy must be either a string or a valid reference object'
+    }
   }
 });
 

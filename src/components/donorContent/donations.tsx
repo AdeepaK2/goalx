@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from "react";
-import { FiBox, FiX } from "react-icons/fi";
+import { FiBox, FiX, FiMail } from "react-icons/fi";
 import { FaPlus } from "react-icons/fa";
+import { HiOutlineAcademicCap } from "react-icons/hi";
+import ContactSchoolModal from "./ContactSchoolModal";
 
 // Football goal animation component
 const GoalAnimation = () => {
@@ -69,7 +71,7 @@ interface DonorData {
     donorType: string;
 }
 
-// Update the DonationItem interface to include schoolName
+// Update the DonationItem interface to include recipientId and schoolImageUrl
 interface DonationItem {
     id: string;
     donationId: string;
@@ -82,7 +84,9 @@ interface DonationItem {
     itemName?: string;
     quantity?: number;
     purpose?: string;
-    schoolName?: string; // Added school name
+    schoolName?: string;
+    recipientId?: string; // Add this field for school contact
+    schoolImageUrl?: string; // Add school image URL
 }
 
 interface DonationsProps {
@@ -397,6 +401,56 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [showDonationForm, setShowDonationForm] = useState(false);
+    
+    // New state for contact modal
+    const [showContactModal, setShowContactModal] = useState(false);
+    const [contactSchool, setContactSchool] = useState<{
+        name: string;
+        email: string;
+        donationDetails: string;
+        imageUrl?: string; // Add imageUrl
+    }>({ name: '', email: '', donationDetails: '' });
+    
+    // New function to handle contact button click
+    const handleContactSchool = async (schoolId: string, schoolName: string, donationDetails: string, schoolImageUrl?: string) => {
+        try {
+            // Add console log to debug the school ID
+            console.log("Fetching school with ID:", schoolId);
+            
+            // Fetch school email from API
+            const response = await fetch(`/api/school?id=${schoolId}`);
+            if (!response.ok) {
+                throw new Error("Could not fetch school contact information");
+            }
+            
+            const schoolData = await response.json();
+            console.log("School data received:", schoolData); // Debug the response
+            
+            // Correctly extract email from the school data structure
+            // The school schema has email inside the contact object
+            const schoolEmail = schoolData.contact?.email;
+            
+            if (!schoolEmail) {
+                alert("Sorry, no contact email is available for this school.");
+                return;
+            }
+            
+            // Get school image if available from API response or use passed value
+            const imageUrl = schoolData.profileImageUrl || schoolImageUrl;
+            
+            // Set the school contact info and show modal
+            setContactSchool({
+                name: schoolName,
+                email: schoolEmail,
+                donationDetails: donationDetails,
+                imageUrl: imageUrl
+            });
+            setShowContactModal(true);
+        } catch (err) {
+            console.error("Error fetching school contact:", err);
+            alert("Could not retrieve school contact information. Please try again later.");
+        }
+    };
 
     useEffect(() => {
         const fetchDonationItems = async () => {
@@ -449,7 +503,9 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                         itemName: donation.itemDetails?.[0]?.itemName,
                         quantity: donation.itemDetails?.[0]?.quantity,
                         purpose: donation.purpose,
-                        schoolName: schoolName // Use the extracted school name
+                        schoolName: schoolName, // Use the extracted school name
+                        recipientId: donation.recipient?._id || donation.recipient, // Added recipientId
+                        schoolImageUrl: donation.recipient?.imageUrl || '' // Added schoolImageUrl
                     };
                 });
                 
@@ -481,7 +537,9 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                             itemName: donation.itemDetails?.[0]?.itemName,
                             quantity: donation.itemDetails?.[0]?.quantity,
                             purpose: donation.purpose,
-                            schoolName: donation.schoolName // Added schoolName
+                            schoolName: donation.schoolName, // Added schoolName
+                            recipientId: donation.recipient?._id || donation.recipient, // Added recipientId
+                            schoolImageUrl: donation.recipient?.imageUrl || '' // Added schoolImageUrl
                         }));
                         
                         setItemsRequestedData(simpleMappedDonations || []);
@@ -556,27 +614,58 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                                 {itemsRequestedData.map((item) => (
                                     <div
                                         key={item.id}
-                                        className="bg-gray-50 p-4 rounded-md flex flex-col md:flex-row md:justify-between"
+                                        className="bg-gray-50 p-4 rounded-md flex flex-col"
                                     >
-                                        <div className="flex flex-col">
-                                            <span className="text-gray-800 font-medium">{item.name}</span>
-                                            <span className="text-gray-500 text-sm">
-                                                {item.donationType === 'MONETARY' ? 'Money Donation' : 
-                                                 item.donationType === 'EQUIPMENT' ? 'Equipment Donation' : 'Other Donation'}
-                                            </span>
-                                            <span className="text-gray-600 text-sm font-medium">
-                                                School: {item.schoolName || "Unknown School"}
-                                            </span>
-                                            <span className="text-gray-500 text-sm">Date: {item.requestDate}</span>
-                                        </div>
-                                        <div className="mt-2 md:mt-0 md:ml-4 flex items-center">
-                                            <span className={`px-2 py-1 rounded-full text-xs font-medium 
-                                                ${item.status === 'completed' ? 'bg-green-100 text-green-800' : 
-                                                 item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                                                 item.status === 'processing' ? 'bg-blue-100 text-blue-800' :
-                                                 'bg-red-100 text-red-800'}`}>
-                                                {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
-                                            </span>
+                                        <div className="flex flex-row">
+                                            {/* Add school image */}
+                                            <div className="mr-4 w-16 h-16 rounded-md overflow-hidden flex-shrink-0">
+                                                {item.schoolImageUrl ? (
+                                                    <img 
+                                                        src={item.schoolImageUrl} 
+                                                        alt={item.schoolName || "School"} 
+                                                        className="w-full h-full object-cover"
+                                                    />
+                                                ) : (
+                                                    <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-300 flex items-center justify-center">
+                                                        <HiOutlineAcademicCap className="h-8 w-8 text-gray-400" />
+                                                    </div>
+                                                )}
+                                            </div>
+                                            
+                                            <div className="flex flex-col flex-grow">
+                                                <span className="text-gray-800 font-medium">{item.name}</span>
+                                                <span className="text-gray-500 text-sm">
+                                                    {item.donationType === 'MONETARY' ? 'Money Donation' : 
+                                                     item.donationType === 'EQUIPMENT' ? 'Equipment Donation' : 'Other Donation'}
+                                                </span>
+                                                <span className="text-gray-600 text-sm font-medium">
+                                                    School: {item.schoolName || "Unknown School"}
+                                                </span>
+                                                <span className="text-gray-500 text-sm">Date: {item.requestDate}</span>
+                                            </div>
+                                            
+                                            <div className="flex flex-col justify-center space-y-2 ml-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-medium text-center
+                                                    ${item.status === 'completed' ? 'bg-green-100 text-green-800' : 
+                                                     item.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                                     item.status === 'processing' ? 'bg-blue-100 text-blue-800' :
+                                                     'bg-red-100 text-red-800'}`}>
+                                                    {item.status.charAt(0).toUpperCase() + item.status.slice(1)}
+                                                </span>
+                                                
+                                                {/* Update the contact school button to pass the image URL */}
+                                                <button
+                                                    onClick={() => handleContactSchool(
+                                                        item.recipientId || '', 
+                                                        item.schoolName || 'School', 
+                                                        item.name,
+                                                        item.schoolImageUrl
+                                                    )}
+                                                    className="flex items-center px-3 py-1 text-sm bg-[#1e0fbf] text-white rounded-md hover:bg-[#6e11b0] transition-colors"
+                                                >
+                                                    <FiMail className="mr-1" /> Contact School
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
                                 ))}
@@ -602,6 +691,19 @@ const Donations: React.FC<DonationsProps> = ({ donorData }) => {
                     <DonationForm 
                         onClose={() => setShowDonationForm(false)} 
                         donorData={donorData} 
+                    />
+                </div>
+            )}
+            
+            {/* New Contact School Modal */}
+            {showContactModal && (
+                <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-4">
+                    <ContactSchoolModal 
+                        schoolName={contactSchool.name}
+                        schoolEmail={contactSchool.email}
+                        donationDetails={contactSchool.donationDetails}
+                        schoolImageUrl={contactSchool.imageUrl}
+                        onClose={() => setShowContactModal(false)}
                     />
                 </div>
             )}
