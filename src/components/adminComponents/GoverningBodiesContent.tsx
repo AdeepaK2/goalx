@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import GoverningBodyEdit from './GoverningBodyEdit';
 import GoverningBodyDelete from './GoverningBodyDelete';
+import GoverningBodyAdd from './GoverningBodyAdd';
 import { toast } from 'react-hot-toast';
 
 interface GoverningBody {
@@ -43,6 +44,9 @@ const GoverningBodiesContent: React.FC = () => {
   // Add state for edit and delete functionality
   const [editingBody, setEditingBody] = useState<GoverningBody | null>(null);
   const [deletingBody, setDeletingBody] = useState<GoverningBody | null>(null);
+  
+  // Add state for add functionality
+  const [isAddModalOpen, setIsAddModalOpen] = useState<boolean>(false);
 
   useEffect(() => {
     fetchGoverningBodies();
@@ -153,6 +157,11 @@ const GoverningBodiesContent: React.FC = () => {
     }
   };
 
+  const handleAddNewBody = (newBody: GoverningBody) => {
+    setGovBodies(prevBodies => [newBody, ...prevBodies]);
+    setIsAddModalOpen(false);
+  };
+
   const filteredBodies = govBodies.filter(body => 
     body.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     body.governBodyId.toLowerCase().includes(searchQuery.toLowerCase())
@@ -191,7 +200,9 @@ const GoverningBodiesContent: React.FC = () => {
           </svg>
         </div>
         
-        <button className="px-4 py-2 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white rounded-lg hover:opacity-90 transition-opacity flex items-center">
+        <button 
+          onClick={() => setIsAddModalOpen(true)} 
+          className="px-4 py-2 bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] text-white rounded-lg hover:opacity-90 transition-opacity flex items-center">
           <svg className="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"></path>
           </svg>
@@ -410,6 +421,14 @@ const GoverningBodiesContent: React.FC = () => {
           governBody={deletingBody}
           onConfirm={handleConfirmDelete}
           onCancel={() => setDeletingBody(null)}
+        />
+      )}
+      
+      {/* Add Modal */}
+      {isAddModalOpen && (
+        <GoverningBodyAdd 
+          onSave={handleAddNewBody}
+          onCancel={() => setIsAddModalOpen(false)}
         />
       )}
     </div>

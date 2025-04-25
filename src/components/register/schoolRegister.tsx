@@ -10,6 +10,9 @@ const SchoolRegister = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
   
+  // Add password validation error state
+  const [passwordError, setPasswordError] = useState<string | null>(null);
+  
   const [formData, setFormData] = useState({
     name: '',
     password: '',
@@ -34,6 +37,26 @@ const SchoolRegister = () => {
     
     // Return only districts that belong to the selected province
     return ProvinceDistrictMap[formData.location.province as SriLankanProvince] || [];
+  };
+
+  // Password validation function
+  const validatePassword = (password: string): string | null => {
+    if (password.length < 8) {
+      return "Password must be at least 8 characters";
+    }
+    if (!/[A-Z]/.test(password)) {
+      return "Password must contain at least one uppercase letter";
+    }
+    if (!/[a-z]/.test(password)) {
+      return "Password must contain at least one lowercase letter";
+    }
+    if (!/[0-9]/.test(password)) {
+      return "Password must contain at least one number";
+    }
+    if (!/[^A-Za-z0-9]/.test(password)) {
+      return "Password must contain at least one special character";
+    }
+    return null;
   };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
@@ -66,6 +89,11 @@ const SchoolRegister = () => {
         ...formData,
         [name]: value
       });
+      
+      // Clear password error when password field changes
+      if (name === 'password') {
+        setPasswordError(validatePassword(value));
+      }
     }
   };
 
@@ -73,6 +101,14 @@ const SchoolRegister = () => {
     e.preventDefault();
     setIsLoading(true);
     setError(null);
+
+    // Validate password strength
+    const passwordValidationError = validatePassword(formData.password);
+    if (passwordValidationError) {
+      setError(passwordValidationError);
+      setIsLoading(false);
+      return;
+    }
 
     // Validate passwords match
     if (formData.password !== formData.confirmPassword) {
@@ -327,6 +363,12 @@ const SchoolRegister = () => {
                     className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-[#1e0fbf] focus:border-[#1e0fbf] sm:text-sm text-black"
                   />
                 </div>
+                {passwordError && (
+                  <p className="mt-1 text-sm text-red-600">{passwordError}</p>
+                )}
+                <p className="mt-1 text-xs text-gray-500">
+                  Password must be at least 8 characters and include uppercase, lowercase, number, and special character.
+                </p>
               </div>
 
               {/* Confirm Password */}
@@ -350,7 +392,7 @@ const SchoolRegister = () => {
               <div>
                 <button
                   type="submit"
-                  disabled={isLoading}
+                  disabled={isLoading || !!passwordError}
                   className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-gradient-to-r from-[#1e0fbf] to-[#6e11b0] hover:from-[#2712c2] hover:to-[#7a15c0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#1e0fbf] disabled:opacity-50"
                 >
                   {isLoading ? 'Registering...' : 'Register School'}
