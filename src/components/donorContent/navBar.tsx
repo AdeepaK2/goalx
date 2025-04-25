@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { FiHome, FiDollarSign, FiUser, FiLogOut } from 'react-icons/fi';
 import { HiOutlineAcademicCap } from 'react-icons/hi';
 
@@ -6,9 +6,39 @@ interface NavBarProps {
   activeTab: string;
   setActiveTab: (tab: string) => void;
   donorName?: string;
+  profileImageUrl?: string;
 }
 
-const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'Donor' }) => {
+const NavBar: React.FC<NavBarProps> = ({ 
+  activeTab, 
+  setActiveTab, 
+  donorName = 'Donor', 
+  profileImageUrl 
+}) => {
+  const [imageError, setImageError] = useState(false);
+  
+  // Add debugging
+  console.log("NavBar received image URL:", profileImageUrl);
+  
+  const getProfileImageUrl = (imageUrl: string | null | undefined) => {
+    if (!imageUrl) {
+      console.log("No image URL provided");
+      return undefined;
+    }
+    
+    console.log("Processing image URL:", imageUrl);
+    
+    if (imageUrl.startsWith('/api/file/download')) {
+      return imageUrl;
+    }
+
+    if (imageUrl.startsWith('http')) {
+      return `/api/file/download?fileUrl=${encodeURIComponent(imageUrl)}`;
+    }
+    
+    return `/api/file/download?file=${encodeURIComponent(imageUrl)}`;
+  };
+  
   const navItems = [
     { id: "dashboard", label: "Dashboard", icon: <FiHome size={20} /> },
     { id: "donations", label: "My Donations", icon: <FiDollarSign size={20} /> },
@@ -24,11 +54,10 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
           headers: {
             "Content-Type": "application/json"
           },
-          body: JSON.stringify({ userType: 'donor' }) // Indicate this is a donor logout
+          body: JSON.stringify({ userType: 'donor' })
         });
         
         if (response.ok) {
-          // Redirect to login page
           window.location.href = '/login';
         } else {
           console.error('Logout failed');
@@ -73,7 +102,20 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
           
           <div className="hidden md:flex items-center">
             <div className="flex items-center border-l border-gray-200 pl-4 ml-4">
-              <FiUser className="text-gray-400" />
+              {profileImageUrl && !imageError ? (
+                <img 
+                  src={getProfileImageUrl(profileImageUrl)}
+                  alt={donorName}
+                  className="h-8 w-8 rounded-full object-cover"
+                  onError={(e) => {
+                    console.error("Failed to load image:", profileImageUrl);
+                    e.currentTarget.onerror = null;
+                    setImageError(true);
+                  }}
+                />
+              ) : (
+                <FiUser className="h-5 w-5 text-gray-400" />
+              )}
               <span className="ml-2 text-sm font-medium text-gray-700">
                 {donorName}
               </span>
@@ -87,8 +129,26 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
             </button>
           </div>
           
-          {/* Mobile menu button */}
           <div className="md:hidden flex items-center">
+            <div className="flex items-center mr-4">
+              {profileImageUrl && !imageError ? (
+                <img 
+                  src={getProfileImageUrl(profileImageUrl)}
+                  alt={donorName}
+                  className="h-8 w-8 rounded-full object-cover"
+                  onError={(e) => {
+                    console.error("Failed to load image:", profileImageUrl);
+                    e.currentTarget.onerror = null;
+                    setImageError(true);
+                  }}
+                />
+              ) : (
+                <FiUser className="h-5 w-5 text-gray-400" />
+              )}
+              <span className="ml-2 text-sm font-medium text-gray-700 truncate max-w-[100px]">
+                {donorName}
+              </span>
+            </div>
             <button
               className="inline-flex items-center justify-center p-2 rounded-md text-gray-400 hover:text-gray-500 hover:bg-gray-100 focus:outline-none"
               aria-expanded="false"
@@ -113,7 +173,6 @@ const NavBar: React.FC<NavBarProps> = ({ activeTab, setActiveTab, donorName = 'D
         </div>
       </div>
       
-      {/* Mobile menu */}
       <div className="hidden md:hidden">
         <div className="pt-2 pb-3 space-y-1">
           {navItems.map((item) => (

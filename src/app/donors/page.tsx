@@ -18,6 +18,8 @@ interface DonorData {
     district?: string;
     province?: string;
   };
+  profileImageUrl?: string;
+  profilePicUrl?: string;
 }
 
 const Page = () => {
@@ -76,7 +78,12 @@ const Page = () => {
   if (isLoading) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <NavBar activeTab={activeTab} setActiveTab={setActiveTab} donorName={donorData?.name || "Donor"} />
+        <NavBar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          donorName={donorData?.name || "Donor"} 
+          profileImageUrl={donorData?.profilePicUrl || donorData?.profileImageUrl}
+        />
         <div className="flex-grow flex items-center justify-center">
           <div className="p-6 text-center">
             <div className="animate-spin rounded-full h-16 w-16 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
@@ -92,7 +99,12 @@ const Page = () => {
   if (error) {
     return (
       <div className="flex flex-col min-h-screen bg-gray-50">
-        <NavBar activeTab={activeTab} setActiveTab={setActiveTab} donorName={donorData?.name || "Donor"} />
+        <NavBar 
+          activeTab={activeTab} 
+          setActiveTab={setActiveTab} 
+          donorName={donorData?.name || "Donor"} 
+          profileImageUrl={donorData?.profilePicUrl || donorData?.profileImageUrl}
+        />
         <div className="flex-grow flex items-center justify-center">
           <div className="p-6 text-center max-w-md">
             <div className="text-red-500 text-5xl mb-4">⚠️</div>
@@ -118,6 +130,7 @@ const Page = () => {
         activeTab={activeTab} 
         setActiveTab={setActiveTab} 
         donorName={donorData?.name || "Donor"} 
+        profileImageUrl={donorData?.profilePicUrl || donorData?.profileImageUrl} 
       />
 
       {/* Main Content Area - conditionally render based on activeTab */}

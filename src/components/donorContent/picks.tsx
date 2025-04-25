@@ -301,13 +301,19 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
                 <div className="h-48 bg-gray-200 relative">
                   {school.imageUrl ? (
                     <img 
-                      src={school.imageUrl} 
+                      src={`/api/file/download?fileUrl=${encodeURIComponent(school.imageUrl)}`}
                       alt={school.schoolName} 
                       className="w-full h-full object-cover"
+                      onError={(e) => {
+                        // Fallback in case image fails to load
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = '/assets/images/school-placeholder.png';
+                      }}
                     />
                   ) : (
-                    <div className="flex items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-300">
-                      <HiOutlineAcademicCap className="h-16 w-16 text-gray-400" />
+                    <div className="flex flex-col items-center justify-center h-full bg-gradient-to-br from-gray-100 to-gray-300">
+                      <HiOutlineAcademicCap className="h-16 w-16 text-gray-400 mb-2" />
+                      <span className="text-gray-500 text-sm">No Image</span>
                     </div>
                   )}
                   

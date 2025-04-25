@@ -74,15 +74,99 @@ export async function GET(request: NextRequest) {
       });
     }
 
+    // Get total count of matching documents
+    const total = await EquipmentRequest.countDocuments(query);
+
     const equipmentRequests = await requestsQuery
       .skip(skip)
       .limit(limit)
       .sort({ createdAt: -1 });
     
-    const total = await EquipmentRequest.countDocuments(query);
-
+    // Format the processedBy field for response
+    const formattedRequests = await Promise.all(equipmentRequests.map(async (request) => {
+      const requestObj = request.toObject();
+      
+      // Handle the processedBy field based on its type
+      if (requestObj.processedBy) {
+        if (typeof requestObj.processedBy === 'string') {
+          // Legacy format - string name
+          // Try to find the entity to get more details
+          try {
+            const governBody = await mongoose.model('GovernBody').findOne({ name: requestObj.processedBy });
+            if (governBody) {
+              requestObj.processedBy = {
+                _id: governBody._id,
+                name: governBody.name,
+                email: governBody.email,
+                type: 'governBody',
+                entityId: governBody._id
+              };
+            } else {
+              // Keep as is but in proper format
+              requestObj.processedBy = {
+                _id: '',
+                name: requestObj.processedBy,
+                type: 'governBody',
+                entityId: ''
+              };
+            }
+          } catch (error) {
+            console.error('Error enriching processedBy:', error);
+            // Fallback to simple object
+            requestObj.processedBy = {
+              _id: '',
+              name: requestObj.processedBy,
+              type: 'governBody',
+              entityId: ''
+            };
+          }
+        } else if (typeof requestObj.processedBy === 'object') {
+          // New format - reference object
+          if (requestObj.processedBy.entity && requestObj.processedBy.entityType) {
+            // Format based on entity type
+            if (requestObj.processedBy.entityType === 'GovernBody') {
+              const governBody = await mongoose.model('GovernBody').findById(requestObj.processedBy.entity);
+              if (governBody) {
+                requestObj.processedBy = {
+                  _id: governBody._id,
+                  name: governBody.name,
+                  email: governBody.email,
+                  type: 'governBody',
+                  entityId: governBody._id
+                };
+              }
+            } else if (requestObj.processedBy.entityType === 'School') {
+              const school = await mongoose.model('School').findById(requestObj.processedBy.entity);
+              if (school) {
+                requestObj.processedBy = {
+                  _id: school._id,
+                  name: school.name,
+                  email: school.contact?.email,
+                  type: 'school',
+                  entityId: school._id
+                };
+              }
+            } else if (requestObj.processedBy.entityType === 'User') {
+              const user = await mongoose.model('User').findById(requestObj.processedBy.entity);
+              if (user) {
+                requestObj.processedBy = {
+                  _id: user._id,
+                  name: user.fullName,
+                  email: user.email,
+                  type: 'admin',
+                  entityId: user._id
+                };
+              }
+            }
+          }
+        }
+      }
+      
+      return requestObj;
+    }));
+    
     return new NextResponse(JSON.stringify({
-      equipmentRequests,
+      equipmentRequests: formattedRequests,
       pagination: {
         total,
         page,
@@ -93,6 +177,7 @@ export async function GET(request: NextRequest) {
       status: 200,
       headers: { 'Content-Type': 'application/json' }
     });
+    
   } catch (error) {
     console.error('Error fetching equipment requests:', error);
     return new NextResponse(JSON.stringify({ error: 'Failed to fetch equipment requests' }), {

@@ -1,9 +1,59 @@
 import { NextRequest, NextResponse } from 'next/server';
-import '../../../model/schoolSchema';
-import '../../../model/donorSchema';
-import Donation from '../../../model/donationSchema';
-import mongoose from 'mongoose';
 import { ensureConnection } from '@/utils/connectionManager';
+import mongoose from 'mongoose';
+import Donation from '@/model/donationSchema';
+import School from '@/model/schoolSchema';
+import Donor from '@/model/donorSchema';
+import { sendDonationConfirmationEmail, sendEmail } from '@/utils/emailService';
+
+// New function to send notification email to school
+async function sendSchoolDonationNotification(
+  schoolId: string,
+  donationId: string,
+  donorName: string,
+  donationType: string,
+  details: string,
+) {
+  try {
+    // Get school information
+    const school = await School.findById(schoolId);
+    if (!school || !school.contact?.email) {
+      console.error('School not found or no email available');
+      return;
+    }
+
+    const htmlContent = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 20px auto; background-color: #ffffff; padding: 30px; border-radius: 8px; box-shadow: 0 4px 8px rgba(0,0,0,0.1);">
+        <h2 style="color: #1e0fbf; margin-top: 0;">New Donation Received!</h2>
+        <p style="line-height: 1.6; color: #333333;">Hello ${school.name} Administrator,</p>
+        <p style="line-height: 1.6; color: #333333;">We're pleased to inform you that your school has received a new donation.</p>
+
+        <div style="margin: 20px 0; padding: 20px; border-left: 4px solid #1e0fbf; background-color: #f9f9f9; border-radius: 4px;">
+          <h3 style="margin-top: 0; color: #6e11b0;">Donation Details</h3>
+          <p style="line-height: 1.6; color: #333333;"><strong>From:</strong> ${donorName}</p>
+          <p style="line-height: 1.6; color: #333333;"><strong>Type:</strong> ${donationType}</p>
+          <p style="line-height: 1.6; color: #333333;"><strong>Details:</strong> ${details}</p>
+          <p style="line-height: 1.6; color: #333333;"><strong>Donation ID:</strong> ${donationId}</p>
+        </div>
+
+        <p style="line-height: 1.6; color: #333333;">You can view all your donations in your school dashboard.</p>
+        <p style="line-height: 1.6; color: #333333;">Don't forget to thank your donor for their contribution!</p>
+
+        <p style="margin-top: 20px; font-size: 0.9em; color: #555555; line-height: 1.6;">Best regards,<br>The GoalX Team</p>
+      </div>
+    `;
+
+    await sendEmail(
+      school.contact.email,
+      'New Donation Received for Your School',
+      htmlContent
+    );
+    
+    console.log(`Donation notification email sent to school: ${school.name}`);
+  } catch (error) {
+    console.error('Error sending school donation notification:', error);
+  }
+}
 
 // GET endpoint - fetch donations
 export async function GET(request: NextRequest) {
@@ -142,87 +192,82 @@ export async function POST(request: NextRequest) {
     const connectionError = await ensureConnection();
     if (connectionError) return connectionError;
 
-    const body = await request.json();
+    // Get the donation data from the request
+    const donationData = await request.json();
     
-    // Validate required fields
-    if (!body.donor || !body.recipient || !body.donationType) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Missing required fields',
-        required: ['donor', 'recipient', 'donationType'] 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Validate donation type
-    if (!['MONETARY', 'EQUIPMENT', 'OTHER'].includes(body.donationType)) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Invalid donation type. Must be one of: MONETARY, EQUIPMENT, OTHER'
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
-    }
-    
-    // Validate donation type specific fields
-    if (body.donationType === 'MONETARY') {
-      if (!body.monetaryDetails || !body.monetaryDetails.amount) {
-        return new NextResponse(JSON.stringify({ 
-          error: 'Monetary donations require amount details'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    } else if (['EQUIPMENT', 'OTHER'].includes(body.donationType)) {
-      if (!body.itemDetails || body.itemDetails.length === 0) {
-        return new NextResponse(JSON.stringify({ 
-          error: 'Equipment/Other donations require item details'
-        }), {
-          status: 400,
-          headers: { 'Content-Type': 'application/json' }
-        });
-      }
-    }
-    
-    // Initialize statusHistory if not provided
-    if (!body.statusHistory) {
-      body.statusHistory = [{
-        status: body.status || 'pending',
-        date: new Date()
-      }];
-    }
-    
-    const donation = new Donation(body);
+    // Create a new donation 
+    const donation = new Donation(donationData);
     await donation.save();
     
-    // Populate references for response
-    await donation.populate('donor', 'displayName donorId donorType');
-    await donation.populate('recipient', 'name schoolId');
-    
-    return new NextResponse(JSON.stringify(donation), {
-      status: 201,
-      headers: { 'Content-Type': 'application/json' }
-    });
-  } catch (error: any) {
-    console.error('Error creating donation:', error);
-    
-    // Handle validation errors
-    if (error instanceof mongoose.Error.ValidationError) {
-      return new NextResponse(JSON.stringify({ 
-        error: 'Validation error', 
-        details: error.errors 
-      }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' }
-      });
+    // Send email notifications
+    try {
+      // Get donor information
+      const donor = await Donor.findById(donationData.donor);
+      if (donor?.email) {
+        // For monetary donations
+        if (donationData.donationType === 'MONETARY' && donationData.monetaryDetails) {
+          await sendDonationConfirmationEmail(
+            donor.email,
+            donor.displayName,
+            donationData.monetaryDetails.amount,
+            'School Support',
+            donation.donationId || donation._id.toString(),
+            new Date()
+          );
+        } else {
+          // For non-monetary donations, adapt the notification format
+          const donationDetails = donationData.itemDetails && donationData.itemDetails.length > 0 
+            ? `${donationData.itemDetails[0].itemName} (${donationData.itemDetails[0].quantity || 1} units)` 
+            : 'General donation';
+            
+          // We can use the same email function but with adapted parameters
+          await sendDonationConfirmationEmail(
+            donor.email,
+            donor.displayName,
+            0, // No monetary amount
+            donationDetails,
+            donation.donationId || donation._id.toString(),
+            new Date()
+          );
+        }
+      }
+      
+      // Send notification to school
+      let donationDetails = '';
+      if (donationData.donationType === 'MONETARY' && donationData.monetaryDetails) {
+        donationDetails = `${donationData.monetaryDetails.amount} ${donationData.monetaryDetails.currency || 'LKR'}`;
+      } else if (donationData.itemDetails && donationData.itemDetails.length > 0) {
+        donationDetails = donationData.itemDetails.map((item: any) => 
+          `${item.itemName} (${item.quantity || 1} units)`
+        ).join(', ');
+      }
+      
+      await sendSchoolDonationNotification(
+        donationData.recipient,
+        donation.donationId || donation._id.toString(),
+        donor?.displayName || 'Anonymous Donor',
+        donationData.donationType,
+        donationDetails
+      );
+    } catch (emailError) {
+      console.error('Error sending donation emails:', emailError);
+      // Continue even if emails fail, as the donation was saved
     }
     
-    return new NextResponse(JSON.stringify({ error: 'Failed to create donation' }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' }
+    return NextResponse.json({
+      success: true,
+      message: 'Donation created successfully',
+      donation: {
+        id: donation._id,
+        donationId: donation.donationId
+      }
     });
+  } catch (error) {
+    console.error('Error creating donation:', error);
+    return NextResponse.json(
+      { error: 'Failed to create donation', details: error instanceof Error ? error.message : 'Unknown error' },
+      { status: 500 }
+    );
   }
 }
 
