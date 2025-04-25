@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { FiHome, FiDollarSign, FiUser, FiLogOut, FiMenu, FiX } from 'react-icons/fi';
 import { HiOutlineAcademicCap } from 'react-icons/hi';
 
@@ -17,6 +17,38 @@ const NavBar: React.FC<NavBarProps> = ({
 }) => {
   const [imageError, setImageError] = useState(false);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+  
+  // Close menu when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node) && isMenuOpen) {
+        setIsMenuOpen(false);
+      }
+    }
+    
+    // Add event listener when menu is open
+    if (isMenuOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isMenuOpen]);
+  
+  // Prevent body scrolling when menu is open
+  useEffect(() => {
+    if (isMenuOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = '';
+    }
+    
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [isMenuOpen]);
   
   const toggleMenu = () => {
     setIsMenuOpen(!isMenuOpen);
@@ -75,7 +107,7 @@ const NavBar: React.FC<NavBarProps> = ({
   };
 
   return (
-    <header className="bg-white shadow-sm">
+    <header className="bg-white shadow-sm relative z-30">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between items-center h-16">
           {/* Logo */}
@@ -176,15 +208,25 @@ const NavBar: React.FC<NavBarProps> = ({
         </div>
       </div>
       
+      {/* Mobile Menu Backdrop */}
+      {isMenuOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-25 md:hidden z-20" onClick={() => setIsMenuOpen(false)}></div>
+      )}
+      
       {/* Mobile Navigation Menu */}
-      <div className={`md:hidden ${isMenuOpen ? 'block' : 'hidden'}`}>
+      <div 
+        ref={menuRef}
+        className={`fixed top-16 right-0 w-full max-w-sm bg-white shadow-lg md:hidden z-30 transform transition-transform duration-300 ease-in-out ${
+          isMenuOpen ? 'translate-x-0' : 'translate-x-full'
+        } h-screen overflow-y-auto`}
+      >
         <div className="pt-2 pb-3 space-y-1 px-2 border-t border-gray-200">
           {/* Mobile nav items */}
           {navItems.map((item) => (
             <button
               key={item.id}
               onClick={() => handleNavigation(item.id)}
-              className={`w-full flex items-center px-3 py-2 rounded-md text-base font-medium ${
+              className={`w-full flex items-center px-3 py-3 rounded-md text-base font-medium ${
                 activeTab === item.id
                   ? "bg-indigo-50 text-indigo-700 border-l-4 border-indigo-500"
                   : "text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-4 border-transparent"
@@ -198,7 +240,7 @@ const NavBar: React.FC<NavBarProps> = ({
           {/* Mobile Logout */}
           <button
             onClick={handleLogout}
-            className="w-full flex items-center px-3 py-2 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-4 border-transparent"
+            className="w-full flex items-center px-3 py-3 rounded-md text-base font-medium text-gray-600 hover:bg-gray-50 hover:text-gray-900 border-l-4 border-transparent"
           >
             <span className="mr-3"><FiLogOut size={20} /></span>
             Logout
@@ -206,7 +248,7 @@ const NavBar: React.FC<NavBarProps> = ({
           
           {/* Mobile user info */}
           <div className="mt-3 pt-4 border-t border-gray-200">
-            <div className="flex items-center px-4">
+            <div className="flex items-center px-4 py-2">
               <div className="text-base font-medium">Signed in as:</div>
               <div className="ml-2 text-base font-medium text-indigo-600">{donorName}</div>
             </div>
