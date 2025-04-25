@@ -46,6 +46,21 @@ interface Transaction {
   createdAt: string;
 }
 
+interface School {
+  _id: string;
+  schoolId: string;
+  name: string;
+  contact?: {
+    email?: string;
+    phone?: string;
+  };
+  location?: {
+    district?: string;
+    province?: string;
+    address?: string;
+  };
+}
+
 interface ProviderContact {
   name: string;
   email?: string;
@@ -63,33 +78,69 @@ const Borrowals = () => {
   const [contactDetails, setContactDetails] = useState<ProviderContact | null>(null);
   const [loadingContact, setLoadingContact] = useState(false);
   const [contactError, setContactError] = useState<string | null>(null);
-
-  // Mock school ID - In a real app, get this from user context/auth
-  const schoolId = "65f903534a0dc23bba9945a3"; // Example ID - replace with actual logic
+  const [currentSchool, setCurrentSchool] = useState<School | null>(null);
+  const [schoolLoading, setSchoolLoading] = useState(true);
 
   useEffect(() => {
-    const fetchBorrowals = async () => {
+    const fetchCurrentSchool = async () => {
       try {
-        setLoading(true);
-        // Fetch ALL transactions where this school is the recipient (removed status filter)
-        const response = await fetch(`/api/equipment/transaction?recipient=${schoolId}`);
+        setSchoolLoading(true);
         
-        if (!response.ok) {
-          throw new Error("Failed to fetch borrowals");
+        // Step 1: Get current authenticated school
+        const meResponse = await fetch('/api/auth/school/me');
+        if (!meResponse.ok) {
+          throw new Error("Failed to authenticate school");
         }
         
-        const data = await response.json();
-        setTransactions(data.transactions || []);
+        const meData = await meResponse.json();
+        if (!meData.success || !meData.school?.id) {
+          throw new Error("Failed to get school ID");
+        }
+        
+        const schoolId = meData.school.id;
+        
+        // Step 2: Get full school details
+        const schoolResponse = await fetch(`/api/school?id=${schoolId}`);
+        if (!schoolResponse.ok) {
+          throw new Error("Failed to fetch school details");
+        }
+        
+        const schoolData = await schoolResponse.json();
+        setCurrentSchool(schoolData);
+        
+        // Step 3: Fetch transactions for this school
+        await fetchTransactions(schoolId);
+        
       } catch (err) {
-        console.error("Error fetching borrowals:", err);
-        setError("Failed to load borrowed equipment. Please try again.");
+        console.error("Error fetching school data:", err);
+        setError("Failed to load school information. Please try again or check your login status.");
       } finally {
-        setLoading(false);
+        setSchoolLoading(false);
       }
     };
-
-    fetchBorrowals();
-  }, [schoolId]);
+    
+    fetchCurrentSchool();
+  }, []);
+  
+  const fetchTransactions = async (schoolId: string) => {
+    try {
+      setLoading(true);
+      // Fetch ALL transactions where this school is the recipient
+      const response = await fetch(`/api/equipment/transaction?recipient=${schoolId}`);
+      
+      if (!response.ok) {
+        throw new Error("Failed to fetch borrowals");
+      }
+      
+      const data = await response.json();
+      setTransactions(data.transactions || []);
+    } catch (err) {
+      console.error("Error fetching borrowals:", err);
+      setError("Failed to load borrowed equipment. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleReturnEquipment = async (transaction: Transaction) => {
     if (!window.confirm("Are you sure you want to mark this as returned?")) {
@@ -219,6 +270,39 @@ const Borrowals = () => {
     return "Active";
   };
 
+  // Loading screen for entire component while getting school data
+  if (schoolLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="inline-block animate-spin rounded-full h-12 w-12 border-4 border-indigo-500 border-t-transparent"></div>
+          <p className="mt-4 text-gray-600">Loading your account information...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error screen if we couldn't get the school info
+  if (!currentSchool && !loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-4">
+        <div className="text-center max-w-md bg-red-50 p-8 rounded-lg shadow">
+          <FiAlertTriangle className="mx-auto h-16 w-16 text-red-500" />
+          <h2 className="mt-4 text-xl font-bold text-red-700">Authentication Error</h2>
+          <p className="mt-2 text-red-600">
+            {error || "Unable to load your school information. Please make sure you're logged in."}
+          </p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-6 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div>
       {/* Hero Section */}
@@ -227,6 +311,11 @@ const Borrowals = () => {
           <h1 className="text-4xl md:text-5xl font-bold text-white text-center">
             Equipment Borrowals
           </h1>
+          {currentSchool && (
+            <h2 className="text-2xl md:text-3xl font-medium text-blue-100 mt-3 text-center">
+              {currentSchool.name}
+            </h2>
+          )}
           <p className="text-blue-100 text-xl mt-4 text-center max-w-2xl mx-auto">
             Track equipment borrowed by your school. Ensure timely
             returns to maintain good relationships with our partners.
@@ -234,8 +323,38 @@ const Borrowals = () => {
         </div>
       </div>
 
+      {/* School info summary */}
+      {currentSchool && (
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 mb-6">
+          <div className="bg-white shadow rounded-lg p-6 border-l-4 border-[#1e0fbf]">
+            <div className="flex flex-col md:flex-row justify-between">
+              <div>
+                <h3 className="text-lg font-medium text-gray-900">School ID: {currentSchool.schoolId}</h3>
+                <p className="mt-1 text-sm text-gray-500">
+                  Location: {currentSchool.location?.district}, {currentSchool.location?.province}
+                </p>
+              </div>
+              {currentSchool.contact && (
+                <div className="mt-4 md:mt-0 text-sm text-gray-600">
+                  {currentSchool.contact.email && (
+                    <div className="flex items-center mb-1">
+                      <FiMail className="mr-2 text-gray-400" /> {currentSchool.contact.email}
+                    </div>
+                  )}
+                  {currentSchool.contact.phone && (
+                    <div className="flex items-center">
+                      <FiPhone className="mr-2 text-gray-400" /> {currentSchool.contact.phone}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Dashboard Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 -mt-10 mb-12">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mb-12">
         <div className="bg-white shadow rounded-lg overflow-hidden">
           <div className="p-5 bg-indigo-50 border-b border-indigo-100 flex justify-between items-center">
             <h2 className="text-lg font-semibold text-gray-800 flex items-center">
