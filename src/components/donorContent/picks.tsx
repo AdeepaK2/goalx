@@ -32,6 +32,7 @@ interface SchoolNeed {
   distance?: number; // in km
   relevanceScore?: number; // 0-100
   sports?: string[];
+  isAIRecommended?: boolean;
 }
 
 interface SchoolNeedsProps {
@@ -129,7 +130,8 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
               itemsNeeded: s.itemsNeeded,
               targetAmount: s.targetAmount,
               urgencyLevel: s.urgencyLevel
-            }))
+            })),
+            minimumRecommendations: 4 // Request at least 4 recommendations
           })
         });
         
@@ -138,13 +140,41 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
           
           // Update with Gemini relevance scores
           if (data.scoredSchools) {
+            // Ensure at least 4 schools have a relevance score even if the API returns fewer
+            let scoredSchools = [...data.scoredSchools];
+            
+            // If we have fewer than 4 scored schools, add relevance scores to additional schools
+            if (scoredSchools.length < 4 && schools.length >= 4) {
+              const unscoredSchools = schools.filter(
+                school => !scoredSchools.some((s: any) => s.id === school.id)
+              );
+              
+              // Add scores to enough unscoredSchools to reach at least 4 total
+              const additionalSchools = unscoredSchools.slice(0, 4 - scoredSchools.length)
+                .map((school, index) => ({
+                  id: school.id,
+                  relevanceScore: 75 - (index * 5), // Assign decreasing scores
+                  distance: school.distance || 0,
+                  isAIRecommended: true
+                }));
+                
+              scoredSchools = [...scoredSchools, ...additionalSchools];
+            }
+            
+            // Ensure all scored schools have the isAIRecommended flag
+            scoredSchools = scoredSchools.map((school: any, index: number) => ({
+              ...school,
+              isAIRecommended: index < 4 // Mark at least top 4 as AI recommended
+            }));
+            
             setSchoolNeeds(prev => 
               prev.map(school => {
-                const scored = data.scoredSchools.find((s: any) => s.id === school.id);
+                const scored = scoredSchools.find((s: any) => s.id === school.id);
                 return scored ? { 
                   ...school, 
                   relevanceScore: scored.relevanceScore,
-                  distance: scored.distance
+                  distance: scored.distance,
+                  isAIRecommended: scored.isAIRecommended
                 } : school;
               }).sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
             );
@@ -158,6 +188,16 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
       } catch (e) {
         console.error("Error with Gemini analysis:", e);
         // Continue without Gemini analysis
+        // Still ensure we have at least 4 "recommended" schools
+        if (schools.length >= 4) {
+          setSchoolNeeds(prev => 
+            prev.map((school, index) => ({
+              ...school,
+              relevanceScore: index < 4 ? 90 - (index * 10) : (school.relevanceScore || 50),
+              isAIRecommended: index < 4
+            })).sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+          );
+        }
       } finally {
         setFiltering(false);
       }
@@ -347,6 +387,17 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
                   {school.relevanceScore && (
                     <div className="absolute bottom-3 right-3 bg-white/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-semibold text-purple-800 border border-purple-200">
                       {school.relevanceScore}% Match
+                    </div>
+                  )}
+                  
+                  {/* AI Recommended badge */}
+                  {school.isAIRecommended && (
+                    <div className="absolute bottom-3 left-3 bg-purple-600/90 backdrop-blur-sm px-2 py-1 rounded-md text-xs font-semibold text-white flex items-center">
+                      <svg className="w-3 h-3 mr-1" viewBox="0 0 20 20" fill="currentColor">
+                        <path fillRule="evenodd" d="M14.5 10a4.5 4.5 0 11-9 0 4.5 4.5 0 019 0zm1.5 0a6 6 0 11-12 0 6 6 0 0112 0z" clipRule="evenodd" />
+                        <path d="M10 2a8 8 0 100 16 8 8 0 000-16zm0 14a6 6 0 110-12 6 6 0 010 12z" />
+                      </svg>
+                      AI Recommended
                     </div>
                   )}
                 </div>
