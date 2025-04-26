@@ -208,7 +208,7 @@ const Dashboard: React.FC<DashboardProps> = ({ setActiveTab, donorData }) => {
                         ) : donorInfo.totalDonated !== "0" ? (
                             <>
                                 You have donated{" "}
-                                <span className="text-5xl">${donorInfo.totalDonated}</span> worth of equipment to Sri Lankan School Sports!
+                                <span className="text-5xl">Rs {donorInfo.totalDonated}</span> worth of equipment to Sri Lankan School Sports!
                             </>
                         ) : (
                             <>
