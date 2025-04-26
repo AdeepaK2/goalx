@@ -61,24 +61,65 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
     const fetchSchoolNeeds = async () => {
       try {
         setLoading(true);
+        setError(null);
         
         // Build query params for filters
         const queryParams = new URLSearchParams();
         if (filters.district) queryParams.append('district', filters.district);
         if (filters.province) queryParams.append('province', filters.province);
         if (filters.urgency) queryParams.append('urgency', filters.urgency);
+        if (filters.needType) queryParams.append('needType', filters.needType);
+        
+        // Add a higher limit to ensure we get enough schools
+        queryParams.append('limit', '20');
         
         // Fetch schools in need from API
-        const response = await fetch(`/api/school/needs?${queryParams.toString()}`);
+        let response = await fetch(`/api/school/needs?${queryParams.toString()}`);
         
         if (!response.ok) {
           throw new Error(`Error ${response.status}`);
         }
         
-        const data = await response.json();
+        let data = await response.json();
+        let processedSchools = data.schools || [];
         
-        // Process schools with donor proximity if location available
-        const processedSchools = data.schools || [];
+        // If no schools found with current filters, try with fewer filters
+        if (processedSchools.length < 4) {
+          console.log("Not enough schools found with current filters, trying broader search");
+          
+          // Try with only province if both district and province are set
+          if (filters.district && filters.province) {
+            const broaderParams = new URLSearchParams();
+            broaderParams.append('province', filters.province);
+            broaderParams.append('limit', '20');
+            
+            const broaderResponse = await fetch(`/api/school/needs?${broaderParams.toString()}`);
+            if (broaderResponse.ok) {
+              const broaderData = await broaderResponse.json();
+              if (broaderData.schools && broaderData.schools.length > 0) {
+                processedSchools = [...processedSchools, ...broaderData.schools.filter(
+                  (s: SchoolNeed) => !processedSchools.some((ps: SchoolNeed) => ps.id === s.id)
+                )];
+              }
+            }
+          }
+          
+          // If still not enough, try with no filters
+          if (processedSchools.length < 4) {
+            const noFilterParams = new URLSearchParams();
+            noFilterParams.append('limit', '20');
+            
+            const noFilterResponse = await fetch(`/api/school/needs?${noFilterParams.toString()}`);
+            if (noFilterResponse.ok) {
+              const noFilterData = await noFilterResponse.json();
+              if (noFilterData.schools && noFilterData.schools.length > 0) {
+                processedSchools = [...processedSchools, ...noFilterData.schools.filter(
+                  (s: SchoolNeed) => !processedSchools.some((ps: SchoolNeed) => ps.id === s.id)
+                )];
+              }
+            }
+          }
+        }
         
         // Extract unique districts and provinces for filter dropdowns
         const uniqueDistricts = [...new Set(processedSchools.map((s: SchoolNeed) => s.district))] as string[];
@@ -96,7 +137,29 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
         
       } catch (err) {
         console.error("Error fetching school needs:", err);
-        setError("Unable to load schools. Please try again later.");
+        setError("We had trouble loading some schools. Showing the best available matches.");
+        
+        // Try to fetch schools with no filters as a fallback
+        try {
+          const fallbackResponse = await fetch(`/api/school/needs?limit=20`);
+          if (fallbackResponse.ok) {
+            const fallbackData = await fallbackResponse.json();
+            if (fallbackData.schools && fallbackData.schools.length > 0) {
+              // Extract unique districts and provinces for filter dropdowns
+              const uniqueDistricts = [...new Set(fallbackData.schools.map((s: SchoolNeed) => s.district))] as string[];
+              const uniqueProvinces = [...new Set(fallbackData.schools.map((s: SchoolNeed) => s.province))] as string[];
+              setDistricts(uniqueDistricts);
+              setProvinces(uniqueProvinces);
+              
+              setSchoolNeeds(fallbackData.schools);
+              
+              // Get Gemini analysis for fallback schools
+              await getGeminiAnalysis(fallbackData.schools, donorData);
+            }
+          }
+        } catch (fallbackErr) {
+          console.error("Error with fallback fetch:", fallbackErr);
+        }
       } finally {
         setLoading(false);
       }
@@ -145,6 +208,7 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
             
             // If we have fewer than 4 scored schools, add relevance scores to additional schools
             if (scoredSchools.length < 4 && schools.length >= 4) {
+              // Find schools that weren't scored by the API
               const unscoredSchools = schools.filter(
                 school => !scoredSchools.some((s: any) => s.id === school.id)
               );
@@ -167,17 +231,36 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
               isAIRecommended: index < 4 // Mark at least top 4 as AI recommended
             }));
             
-            setSchoolNeeds(prev => 
-              prev.map(school => {
-                const scored = scoredSchools.find((s: any) => s.id === school.id);
-                return scored ? { 
-                  ...school, 
-                  relevanceScore: scored.relevanceScore,
-                  distance: scored.distance,
-                  isAIRecommended: scored.isAIRecommended
-                } : school;
-              }).sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
+            // Apply scores to schools and ensure at least 4 recommendations
+            const updatedSchools = schools.map(school => {
+              const scored = scoredSchools.find((s: any) => s.id === school.id);
+              return scored ? { 
+                ...school, 
+                relevanceScore: scored.relevanceScore,
+                distance: scored.distance,
+                isAIRecommended: scored.isAIRecommended
+              } : school;
+            });
+            
+            // Sort by relevance score and verify at least 4 recommendations
+            const sortedSchools = [...updatedSchools].sort((a, b) => 
+              (b.relevanceScore || 0) - (a.relevanceScore || 0)
             );
+            
+            // Check if we have enough AI recommendations
+            const recommendedCount = sortedSchools.filter(s => s.isAIRecommended).length;
+            
+            // If fewer than 4 are recommended, mark more as recommended
+            if (recommendedCount < 4) {
+              for (let i = 0; i < sortedSchools.length && recommendedCount + i < 4; i++) {
+                if (!sortedSchools[i].isAIRecommended) {
+                  sortedSchools[i].isAIRecommended = true;
+                  sortedSchools[i].relevanceScore = sortedSchools[i].relevanceScore || 70 - i;
+                }
+              }
+            }
+            
+            setSchoolNeeds(sortedSchools);
           }
           
           // Set analysis text
@@ -187,24 +270,33 @@ const SchoolNeeds: React.FC<SchoolNeedsProps> = ({ donorData }) => {
         }
       } catch (e) {
         console.error("Error with Gemini analysis:", e);
-        // Continue without Gemini analysis
-        // Still ensure we have at least 4 "recommended" schools
-        if (schools.length >= 4) {
-          setSchoolNeeds(prev => 
-            prev.map((school, index) => ({
-              ...school,
-              relevanceScore: index < 4 ? 90 - (index * 10) : (school.relevanceScore || 50),
-              isAIRecommended: index < 4
-            })).sort((a, b) => (b.relevanceScore || 0) - (a.relevanceScore || 0))
-          );
-        }
+        // Continue without Gemini analysis but ensure we have recommendations
+        // Make sure at least 4 schools are marked as recommended
+        setSchoolNeeds(prev => {
+          const sortedSchools = [...prev].sort((a, b) => {
+            // Sort by urgency first
+            const urgencyOrder = { 'HIGH': 3, 'MEDIUM': 2, 'LOW': 1 };
+            const urgencyDiff = (urgencyOrder[b.urgencyLevel] || 0) - (urgencyOrder[a.urgencyLevel] || 0);
+            if (urgencyDiff !== 0) return urgencyDiff;
+            
+            // Then by relevance score if available
+            return (b.relevanceScore || 0) - (a.relevanceScore || 0);
+          });
+          
+          // Mark top 4 as recommended
+          return sortedSchools.map((school, index) => ({
+            ...school,
+            relevanceScore: index < 4 ? (school.relevanceScore || 90 - (index * 10)) : (school.relevanceScore || 50),
+            isAIRecommended: index < 4 ? true : !!school.isAIRecommended
+          }));
+        });
       } finally {
         setFiltering(false);
       }
     };
 
     fetchSchoolNeeds();
-  }, [donorData, filters.district, filters.province, filters.urgency]);
+  }, [donorData, filters.district, filters.province, filters.urgency, filters.needType]);
 
   const handleFilterChange = (name: string, value: string) => {
     setFilters(prev => ({ ...prev, [name]: value }));
